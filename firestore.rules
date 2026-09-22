@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read, create, update: if isSelf(userId);
+      allow delete: if false;
+    }
+
+    // Prototype rule set: any signed-in user can create/join/read/write home data.
+    // Tighten this before sharing publicly.
+    match /houses/{houseId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if false;
+
+      match /{document=**} {
+        allow read, create, update, delete: if isSignedIn();
+      }
+    }
+  }
+}
