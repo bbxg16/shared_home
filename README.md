@@ -100,9 +100,27 @@ firebase deploy --only firestore:rules
 
 ## Shareable Test Link
 
-GitHub Pages is configured through `.github/workflows/deploy-pages.yml`.
+Firebase Hosting is the recommended free shareable test link for this project.
 
-After pushing to `main`, the test app should be available at:
+Deploy it with:
+
+```bash
+npm run build
+firebase login --reauth
+firebase deploy --project shared-home-48f90 --only hosting,firestore:rules
+```
+
+Firebase will print a live URL, usually:
+
+```text
+https://shared-home-48f90.web.app
+```
+
+Add `shared-home-48f90.web.app` in Firebase Console → Authentication → Settings → Authorized domains.
+
+GitHub Pages is also configured through `.github/workflows/deploy-pages.yml`, but private repositories may require a paid GitHub plan.
+
+If you make the repo public and use GitHub Pages, the app should be available at:
 
 ```text
 https://bbxg16.github.io/shared_home/
