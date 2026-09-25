@@ -960,7 +960,7 @@ function getUserDisplayName(user: User, profileDisplayName?: string | null) {
 
 function formatFirebaseError(message: string) {
   if (message.toLowerCase().includes("missing or insufficient permissions")) {
-    return "Firebase rules are blocking this action. Publish the included Firestore rules in Firebase Console, then refresh.";
+    return "权限设置阻止了这个操作。请更新数据库规则后刷新页面。";
   }
   return message;
 }

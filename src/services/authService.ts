@@ -23,7 +23,7 @@ export function observeAuthState(callback: (user: User | null) => void): Unsubsc
 
 export async function signInWithGoogle(): Promise<User> {
   if (!auth) {
-    throw new Error("Firebase is not configured. Add .env.local with your VITE_FIREBASE_* values.");
+    throw new Error("Sign-in is unavailable in this build.");
   }
 
   const credential = await signInWithPopup(auth, googleProvider);
@@ -33,7 +33,7 @@ export async function signInWithGoogle(): Promise<User> {
 
 export async function signInAsGuest(): Promise<User> {
   if (!auth) {
-    throw new Error("Firebase is not configured. Add .env.local with your VITE_FIREBASE_* values.");
+    throw new Error("Sign-in is unavailable in this build.");
   }
 
   const credential = await signInAnonymously(auth);

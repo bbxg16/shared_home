@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Crown, Home, Save, Scale, UserMinus } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
-import { FirebasePanel } from "@/components/common/FirebasePanel";
+import { AccountPanel } from "@/components/common/AccountPanel";
 import { mockHouse } from "@/data/mockData";
 import { useAppData } from "@/state/AppDataContext";
 import { useLanguage } from "@/state/LanguageContext";
@@ -181,7 +181,9 @@ export function HousePage() {
         title={house?.name ?? t("house")}
         subtitle={
           house
-            ? `${members.length} members · signed in as ${currentUser.displayName}`
+            ? t("signedInAs")
+                .replace("{count}", String(members.length))
+                .replace("{name}", currentUser.displayName)
             : authUser
               ? t("createOrJoinHome")
               : t("signInToCreateHome")
@@ -189,7 +191,7 @@ export function HousePage() {
       />
 
       <div className="flex flex-col gap-4 px-5">
-        <FirebasePanel />
+        <AccountPanel />
 
         {authUser ? (
           <section className="pinned-card flex flex-col gap-3">

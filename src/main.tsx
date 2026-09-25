@@ -5,8 +5,6 @@ import App from "@/App";
 import { AppDataProvider } from "@/state/AppDataContext";
 import { LanguageProvider } from "@/state/LanguageContext";
 import "@/index.css";
-
-// Importing this module initializes Firebase when VITE_FIREBASE_* env values exist.
 import "@/lib/firebase";
 
 const routerBasename =

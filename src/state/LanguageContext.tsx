@@ -1,17 +1,26 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type Language = "en" | "zh";
 
 const TEXT = {
   en: {
+    appName: "Memorial",
     home: "Home",
     requests: "Petitions",
     reports: "Accusations",
     house: "House",
     signedOut: "Signed out",
-    firebaseLive: "Firebase live",
-    firebaseConfigured: "Firebase configured · signed out",
-    demoMode: "Demo mode",
+    account: "Account",
+    checkingAccount: "Checking account...",
+    signInUnavailable: "Sign-in is unavailable in this build.",
+    actionFailed: "Something went wrong.",
+    signingOut: "Signing out...",
+    signOut: "Sign out",
+    openingGoogle: "Opening Google...",
+    signInWithGoogle: "Sign in with Google",
+    signingIn: "Signing in...",
+    continueAsGuest: "Continue as guest",
+    guestUser: "Guest user",
     createOrJoinHome: "Create or join one shared home",
     signInToCreateHome: "Sign in to create or join a home",
     displayName: "Display name",
@@ -71,16 +80,31 @@ const TEXT = {
     approvalRateHint: "How often each member approves or agrees with other members' posts.",
     noVotesYet: "No votes yet",
     needsVotes: "needs {required} of {total}",
+    noHomeJoined: "No home joined",
+    demoHome: "Demo home",
+    pendingFromYou: "{pending} pending · {mine} from you",
+    openReportsThisWeek: "{count} open this week",
+    inviteAndMembers: "invite and members",
+    signedInAs: "{count} members · signed in as {name}",
   },
   zh: {
+    appName: "有本要奏",
     home: "首页",
     requests: "臣要上奏",
     reports: "臣要告发",
     house: "家庭",
     signedOut: "未登录",
-    firebaseLive: "Firebase 已连接",
-    firebaseConfigured: "Firebase 已配置 · 未登录",
-    demoMode: "演示模式",
+    account: "个人账号",
+    checkingAccount: "正在检查账号...",
+    signInUnavailable: "当前版本暂不支持登录。",
+    actionFailed: "操作失败，请稍后再试。",
+    signingOut: "正在退出...",
+    signOut: "退出登录",
+    openingGoogle: "正在打开 Google...",
+    signInWithGoogle: "用 Google 登录",
+    signingIn: "正在登录...",
+    continueAsGuest: "游客进入",
+    guestUser: "游客",
     createOrJoinHome: "创建或加入一个家庭",
     signInToCreateHome: "请先登录，再创建或加入家庭",
     displayName: "用户名",
@@ -140,6 +164,12 @@ const TEXT = {
     approvalRateHint: "每个人给别人投票时，选择通过/同意的比例。",
     noVotesYet: "暂无投票",
     needsVotes: "需要 {required}/{total}",
+    noHomeJoined: "还没有加入家庭",
+    demoHome: "有本要奏 Demo",
+    pendingFromYou: "{pending} 个待批 · 你提交了 {mine} 个",
+    openReportsThisWeek: "本周 {count} 个进行中",
+    inviteAndMembers: "邀请码和成员",
+    signedInAs: "{count} 位成员 · 当前用户 {name}",
   },
 } as const;
 
@@ -153,8 +183,12 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
-    return localStorage.getItem("shared-home-language") === "zh" ? "zh" : "en";
+    return localStorage.getItem("shared-home-language") === "en" ? "en" : "zh";
   });
+
+  useEffect(() => {
+    document.title = TEXT[language].appName;
+  }, [language]);
 
   const value = useMemo<LanguageContextValue>(() => {
     return {

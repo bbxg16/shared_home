@@ -8,10 +8,12 @@ import {
   signOutCurrentUser,
 } from "@/services/authService";
 import { isFirebaseConfigured } from "@/lib/firebase";
+import { useLanguage } from "@/state/LanguageContext";
 
 type BusyAction = "google" | "guest" | "signout" | null;
 
-export function FirebasePanel() {
+export function AccountPanel() {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
@@ -31,13 +33,13 @@ export function FirebasePanel() {
     try {
       await callback();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Firebase action failed.");
+      setMessage(error instanceof Error ? error.message : t("actionFailed"));
     } finally {
       setBusyAction(null);
     }
   }
 
-  const displayName = user?.displayName || user?.email || (user?.isAnonymous ? "Guest user" : null);
+  const displayName = user?.displayName || user?.email || (user?.isAnonymous ? t("guestUser") : null);
 
   return (
     <section className="pinned-card">
@@ -46,9 +48,9 @@ export function FirebasePanel() {
           <UserRound className="h-5 w-5" strokeWidth={1.75} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-base font-semibold text-ink">Firebase</p>
+          <p className="font-display text-base font-semibold text-ink">{t("account")}</p>
           <p className="truncate text-sm text-ink-soft">
-            {!authReady ? "Checking account..." : displayName ?? "Signed out"}
+            {!authReady ? t("checkingAccount") : displayName ?? t("signedOut")}
           </p>
         </div>
       </div>
@@ -56,7 +58,7 @@ export function FirebasePanel() {
       <div className="mt-4 flex flex-col gap-2">
         {!isFirebaseConfigured ? (
           <div className="rounded-card bg-honey-100 p-3 text-sm text-honey-700">
-            Add `.env.local` with your Firebase web app config to enable sign-in.
+            {t("signInUnavailable")}
           </div>
         ) : user ? (
           <>
@@ -67,7 +69,7 @@ export function FirebasePanel() {
               className="flex items-center justify-center gap-2 rounded-card border border-ink/15 py-2.5 text-sm font-medium text-ink disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" strokeWidth={2} />
-              {busyAction === "signout" ? "Signing out..." : "Sign out"}
+              {busyAction === "signout" ? t("signingOut") : t("signOut")}
             </button>
           </>
         ) : (
@@ -79,7 +81,7 @@ export function FirebasePanel() {
               className="flex items-center justify-center gap-2 rounded-card bg-ink py-2.5 text-sm font-medium text-white disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" strokeWidth={2} />
-              {busyAction === "google" ? "Opening Google..." : "Sign in with Google"}
+              {busyAction === "google" ? t("openingGoogle") : t("signInWithGoogle")}
             </button>
             <button
               type="button"
@@ -87,7 +89,7 @@ export function FirebasePanel() {
               onClick={() => void runAction("guest", signInAsGuest)}
               className="rounded-card border border-ink/15 py-2.5 text-sm font-medium text-ink disabled:opacity-60"
             >
-              {busyAction === "guest" ? "Signing in..." : "Continue as guest"}
+              {busyAction === "guest" ? t("signingIn") : t("continueAsGuest")}
             </button>
           </>
         )}

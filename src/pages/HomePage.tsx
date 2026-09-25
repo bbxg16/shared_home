@@ -5,27 +5,18 @@ import { useAppData } from "@/state/AppDataContext";
 import { useLanguage } from "@/state/LanguageContext";
 
 export function HomePage() {
-  const { authUser, currentHouse, currentUser, isFirebaseMode, members, purchases, reports } = useAppData();
+  const { currentHouse, currentUser, isFirebaseMode, members, purchases, reports } = useAppData();
   const { t } = useLanguage();
   const pendingPurchaseCount = purchases.filter((purchase) => purchase.status === "pending").length;
   const openReportCount = reports.filter((report) => report.status === "open").length;
   const myRequestCount = purchases.filter((purchase) => purchase.requestedBy === currentUser.userId).length;
-  const houseName = currentHouse?.name ?? (isFirebaseMode ? "No home joined" : "有本要奏 Demo");
-  const modeLabel = isFirebaseMode
-    ? authUser
-      ? t("firebaseLive")
-      : t("firebaseConfigured")
-    : t("demoMode");
+  const houseName = currentHouse?.name ?? (isFirebaseMode ? t("noHomeJoined") : t("demoHome"));
 
   return (
     <div>
-      <AppHeader title="有本要奏" subtitle={`${houseName} · ${members.length} members`} />
+      <AppHeader title={t("appName")} subtitle={`${houseName} · ${members.length} ${t("members").toLowerCase()}`} />
 
       <div className="flex flex-col gap-4 px-5">
-        <div className={`rounded-card px-3 py-2 text-xs font-medium ${isFirebaseMode ? "bg-sage-100 text-sage-700" : "bg-honey-100 text-honey-700"}`}>
-          {modeLabel}
-        </div>
-
         <Link to="/purchases" className="pinned-card flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-honey-100 text-honey-700">
@@ -33,7 +24,11 @@ export function HomePage() {
             </span>
             <div>
               <p className="font-display text-lg font-semibold text-ink">{t("requests")}</p>
-              <p className="text-sm text-ink-soft">{pendingPurchaseCount} pending · {myRequestCount} from you</p>
+              <p className="text-sm text-ink-soft">
+                {t("pendingFromYou")
+                  .replace("{pending}", String(pendingPurchaseCount))
+                  .replace("{mine}", String(myRequestCount))}
+              </p>
             </div>
           </div>
           <ChevronRight className="h-5 w-5 text-ink-soft" strokeWidth={1.75} />
@@ -46,7 +41,9 @@ export function HomePage() {
             </span>
             <div>
               <p className="font-display text-lg font-semibold text-ink">{t("reports")}</p>
-              <p className="text-sm text-ink-soft">{openReportCount} open reports this week</p>
+              <p className="text-sm text-ink-soft">
+                {t("openReportsThisWeek").replace("{count}", String(openReportCount))}
+              </p>
             </div>
           </div>
           <ChevronRight className="h-5 w-5 text-ink-soft" strokeWidth={1.75} />
@@ -59,7 +56,7 @@ export function HomePage() {
           <span className="flex items-center gap-2">
             <Users className="h-4 w-4" strokeWidth={1.75} />
             <span>
-              <span className="font-medium text-ink">{houseName}</span> invite and members
+              <span className="font-medium text-ink">{houseName}</span> {t("inviteAndMembers")}
             </span>
           </span>
           <ChevronRight className="h-4 w-4" strokeWidth={1.75} />
