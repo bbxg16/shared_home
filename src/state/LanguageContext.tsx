@@ -4,10 +4,10 @@ export type Language = "en" | "zh";
 
 const TEXT = {
   en: {
-    appName: "Memorial",
+    appName: "Request & Report",
     home: "Home",
-    requests: "Petitions",
-    reports: "Accusations",
+    requests: "Requests",
+    reports: "Reports",
     house: "House",
     signedOut: "Signed out",
     account: "Account",
