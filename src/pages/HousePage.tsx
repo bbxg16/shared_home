@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Copy, Crown, Home, Save, UserMinus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Copy, Crown, Home, Save, Scale, UserMinus } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
 import { FirebasePanel } from "@/components/common/FirebasePanel";
 import { mockHouse } from "@/data/mockData";
@@ -12,6 +12,10 @@ export function HousePage() {
     currentUser,
     currentHouse,
     members,
+    purchases,
+    purchaseVotes,
+    reports,
+    reportVotes,
     isFirebaseMode,
     error,
     createHome,
@@ -30,6 +34,48 @@ export function HousePage() {
 
   const house = currentHouse ?? (!isFirebaseMode ? mockHouse : null);
   const isOwner = Boolean(authUser && house?.ownerId === authUser.uid);
+  const approvalRates = useMemo(() => {
+    return members.map((member) => {
+      let approvedCount = 0;
+      let totalCount = 0;
+
+      purchases.forEach((purchase) => {
+        if (purchase.requestedBy === member.userId) {
+          return;
+        }
+        const vote = purchaseVotes[purchase.id]?.find((item) => item.userId === member.userId);
+        if (!vote) {
+          return;
+        }
+        totalCount += 1;
+        if (vote.vote === "approve") {
+          approvedCount += 1;
+        }
+      });
+
+      reports.forEach((report) => {
+        if (report.reportedBy === member.userId || report.targetUserId === member.userId) {
+          return;
+        }
+        const vote = reportVotes[report.id]?.find((item) => item.userId === member.userId);
+        if (!vote) {
+          return;
+        }
+        totalCount += 1;
+        if (vote.vote === "agree") {
+          approvedCount += 1;
+        }
+      });
+
+      return {
+        userId: member.userId,
+        displayName: member.displayName,
+        approvedCount,
+        totalCount,
+        rate: totalCount === 0 ? null : Math.round((approvedCount / totalCount) * 100),
+      };
+    });
+  }, [members, purchaseVotes, purchases, reportVotes, reports]);
 
   useEffect(() => {
     setDisplayName(currentUser.displayName);
@@ -269,6 +315,37 @@ export function HousePage() {
         ) : null}
 
         {message || error ? <p className="px-1 text-sm text-ink-soft">{message ?? error}</p> : null}
+
+        {house ? (
+          <section className="pinned-card">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-honey-100 text-honey-700">
+                <Scale className="h-4 w-4" strokeWidth={1.75} />
+              </span>
+              <div>
+                <p className="font-display text-base font-semibold text-ink">{t("approvalRate")}</p>
+                <p className="text-xs text-ink-soft">{t("approvalRateHint")}</p>
+              </div>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {approvalRates.map((memberRate) => (
+                <li key={memberRate.userId} className="rounded-card bg-ink/[0.04] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 font-medium text-ink">{memberRate.displayName}</span>
+                    <span className="font-mono text-sm font-semibold text-ink">
+                      {memberRate.rate === null ? t("noVotesYet") : `${memberRate.rate}%`}
+                    </span>
+                  </div>
+                  {memberRate.rate !== null ? (
+                    <p className="mt-1 font-mono text-xs text-ink-soft">
+                      {memberRate.approvedCount}/{memberRate.totalCount}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <div>
           <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-ink-soft">{t("members")}</p>

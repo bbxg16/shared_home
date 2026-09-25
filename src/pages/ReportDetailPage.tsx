@@ -149,10 +149,12 @@ export function ReportDetailPage() {
         ) : null}
 
         <section className="pinned-card">
-          <p className="font-display text-base font-semibold text-ink">Vote summary</p>
+          <p className="font-display text-base font-semibold text-ink">{t("reviewMemorial")}</p>
           <p className="mt-1 text-sm text-ink-soft">
-            {agreeCount} agree · {disagreeCount} disagree · needs {report.requiredAgreementCount} of{" "}
-            {report.eligibleVoterCount}
+            {agreeCount} {t("agreeAction")} · {disagreeCount} {t("disagreeAction")} ·{" "}
+            {t("needsVotes")
+              .replace("{required}", String(report.requiredAgreementCount))
+              .replace("{total}", String(report.eligibleVoterCount))}
           </p>
 
           {votes.length > 0 ? (
@@ -195,7 +197,7 @@ export function ReportDetailPage() {
               className="flex flex-1 items-center justify-center gap-2 rounded-card border-2 border-clay-500/40 py-3 font-medium text-clay-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <X className="h-4 w-4" strokeWidth={2.5} />
-              Disagree
+              {t("disagreeAction")}
             </button>
             <button
               type="button"
@@ -204,7 +206,7 @@ export function ReportDetailPage() {
               className="flex flex-1 items-center justify-center gap-2 rounded-card border-2 border-sage-500/50 py-3 font-medium text-sage-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Check className="h-4 w-4" strokeWidth={2.5} />
-              Agree
+              {t("agreeAction")}
             </button>
           </div>
         </section>
