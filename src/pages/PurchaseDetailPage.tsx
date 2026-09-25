@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Check, ExternalLink, Tags, X } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Check, ExternalLink, Tags, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAppData } from "@/state/AppDataContext";
+import { useLanguage } from "@/state/LanguageContext";
 import type { VoteType } from "@/types";
 
 export function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser, purchases, purchaseVotes, voteOnPurchase } = useAppData();
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const { currentUser, purchases, purchaseVotes, voteOnPurchase, deletePurchaseRequest } = useAppData();
   const [comment, setComment] = useState("");
   const purchase = purchases.find((item) => item.id === id);
 
@@ -44,6 +47,14 @@ export function PurchaseDetailPage() {
     setComment("");
   }
 
+  async function handleDelete() {
+    if (!window.confirm(t("confirmDeleteRequest"))) {
+      return;
+    }
+    await deletePurchaseRequest(purchaseId);
+    navigate("/purchases");
+  }
+
   return (
     <div>
       <div className="flex items-center gap-2 px-5 pt-6">
@@ -65,6 +76,17 @@ export function PurchaseDetailPage() {
       </div>
 
       <div className="flex flex-col gap-4 px-5">
+        {isRequester ? (
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="flex items-center justify-center gap-2 rounded-card border border-clay-500/40 bg-white py-2.5 text-sm font-medium text-clay-700"
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+            {t("deleteRequest")}
+          </button>
+        ) : null}
+
         <section className="pinned-card">
           <dl className="flex flex-col gap-2 text-sm">
             {purchase.price ? (

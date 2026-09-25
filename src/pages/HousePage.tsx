@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, Crown, Home } from "lucide-react";
+import { Copy, Crown, Home, Save, UserMinus } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
 import { FirebasePanel } from "@/components/common/FirebasePanel";
 import { mockHouse } from "@/data/mockData";
@@ -16,20 +16,28 @@ export function HousePage() {
     error,
     createHome,
     joinHomeWithInviteCode,
+    updateHomeName,
+    removeMember,
     updateDisplayName,
   } = useAppData();
   const { t } = useLanguage();
   const [homeName, setHomeName] = useState("Approval Home");
+  const [nextHouseName, setNextHouseName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [displayName, setDisplayName] = useState(currentUser.displayName);
   const [message, setMessage] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
 
   const house = currentHouse ?? (!isFirebaseMode ? mockHouse : null);
+  const isOwner = Boolean(authUser && house?.ownerId === authUser.uid);
 
   useEffect(() => {
     setDisplayName(currentUser.displayName);
   }, [currentUser.displayName]);
+
+  useEffect(() => {
+    setNextHouseName(house?.name ?? "");
+  }, [house?.name]);
 
   async function copyInviteCode() {
     if (!house?.inviteCode) {
@@ -82,6 +90,40 @@ export function HousePage() {
       setMessage("Name saved.");
     } catch (nameError) {
       setMessage(nameError instanceof Error ? nameError.message : "Could not save name.");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function handleSaveHomeName() {
+    if (!nextHouseName.trim()) {
+      return;
+    }
+
+    setIsWorking(true);
+    setMessage(null);
+    try {
+      await updateHomeName(nextHouseName);
+      setMessage(t("homeNameSaved"));
+    } catch (nameError) {
+      setMessage(nameError instanceof Error ? nameError.message : t("couldNotSaveHomeName"));
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function handleRemoveMember(userId: string, displayName: string) {
+    if (!window.confirm(t("confirmRemoveMember").replace("{name}", displayName))) {
+      return;
+    }
+
+    setIsWorking(true);
+    setMessage(null);
+    try {
+      await removeMember(userId);
+      setMessage(t("memberRemoved"));
+    } catch (removeError) {
+      setMessage(removeError instanceof Error ? removeError.message : t("couldNotRemoveMember"));
     } finally {
       setIsWorking(false);
     }
@@ -201,6 +243,28 @@ export function HousePage() {
                 {t("join")}
               </button>
             </div>
+            {isOwner ? (
+              <div className="mt-3 border-t border-ink/10 pt-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">{t("homeName")}</p>
+                <div className="flex gap-2">
+                  <input
+                    value={nextHouseName}
+                    onChange={(event) => setNextHouseName(event.target.value)}
+                    placeholder={t("homeName")}
+                    className="min-w-0 flex-1 rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={isWorking}
+                    onClick={() => void handleSaveHomeName()}
+                    className="flex items-center gap-1.5 rounded-card bg-sage-500 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  >
+                    <Save className="h-4 w-4" strokeWidth={1.75} />
+                    {t("save")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -221,6 +285,18 @@ export function HousePage() {
                   </span>
                 </span>
                 {member.role === "owner" ? <Crown className="h-4 w-4 text-honey-500" strokeWidth={1.75} /> : null}
+                {isOwner && member.userId !== house?.ownerId ? (
+                  <button
+                    type="button"
+                    disabled={isWorking}
+                    onClick={() => void handleRemoveMember(member.userId, member.displayName)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-clay-700 hover:bg-clay-100 disabled:opacity-60"
+                    aria-label={t("removeMember")}
+                    title={t("removeMember")}
+                  >
+                    <UserMinus className="h-4 w-4" strokeWidth={1.75} />
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>

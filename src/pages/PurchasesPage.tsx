@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Plus, Tags } from "lucide-react";
+import { ChevronRight, Plus, Tags, Trash2 } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -17,7 +17,16 @@ const TABS: { key: TabKey; label: string; statuses?: PurchaseStatus[] }[] = [
 ];
 
 export function PurchasesPage() {
-  const { currentUser, currentHouse, error, isFirebaseMode, purchases, purchaseVotes, createPurchaseRequest } = useAppData();
+  const {
+    currentUser,
+    currentHouse,
+    error,
+    isFirebaseMode,
+    purchases,
+    purchaseVotes,
+    createPurchaseRequest,
+    deletePurchaseRequest,
+  } = useAppData();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("pending");
   const [showForm, setShowForm] = useState(false);
@@ -144,6 +153,8 @@ export function PurchasesPage() {
               key={purchase.id}
               purchase={purchase}
               approveCount={(purchaseVotes[purchase.id] ?? []).filter((vote) => vote.vote === "approve").length}
+              canDelete={purchase.requestedBy === currentUser.userId}
+              onDelete={() => deletePurchaseRequest(purchase.id)}
             />
           ))
         )}
@@ -152,24 +163,58 @@ export function PurchasesPage() {
   );
 }
 
-function PurchaseCard({ purchase, approveCount }: { purchase: Purchase; approveCount: number }) {
+function PurchaseCard({
+  purchase,
+  approveCount,
+  canDelete,
+  onDelete,
+}: {
+  purchase: Purchase;
+  approveCount: number;
+  canDelete: boolean;
+  onDelete: () => Promise<void>;
+}) {
+  const { t } = useLanguage();
+
+  async function handleDelete() {
+    if (!window.confirm(t("confirmDeleteRequest"))) {
+      return;
+    }
+    await onDelete();
+  }
+
   return (
-    <Link to={`/purchases/${purchase.id}`} className="pinned-card block overflow-hidden">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-display text-lg font-semibold leading-tight text-ink">{purchase.name}</p>
-          {purchase.price ? <p className="mt-0.5 font-mono text-sm text-ink-soft">{purchase.price}</p> : null}
+    <article className="pinned-card overflow-hidden">
+      <Link to={`/purchases/${purchase.id}`} className="block">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-display text-lg font-semibold leading-tight text-ink">{purchase.name}</p>
+            {purchase.price ? <p className="mt-0.5 font-mono text-sm text-ink-soft">{purchase.price}</p> : null}
+          </div>
+          <StatusBadge status={purchase.status} />
         </div>
-        <StatusBadge status={purchase.status} />
+        <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{purchase.description}</p>
+      </Link>
+      <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink-soft">
+        <Link to={`/purchases/${purchase.id}`} className="min-w-0 flex-1">
+          <span>By {purchase.requestedByName}</span>
+          <span className="ml-2 inline-flex items-center gap-1 font-mono text-xs">
+            {approveCount}/{purchase.requiredApprovals}
+            <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
+          </span>
+        </Link>
+        {canDelete ? (
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-clay-700 hover:bg-clay-100"
+            aria-label={t("deleteRequest")}
+            title={t("deleteRequest")}
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+          </button>
+        ) : null}
       </div>
-      <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{purchase.description}</p>
-      <div className="mt-3 flex items-center justify-between text-sm text-ink-soft">
-        <span>By {purchase.requestedByName}</span>
-        <span className="flex items-center gap-1 font-mono text-xs">
-          {approveCount}/{purchase.requiredApprovals}
-          <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
-        </span>
-      </div>
-    </Link>
+    </article>
   );
 }

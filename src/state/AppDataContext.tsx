@@ -21,6 +21,7 @@ import {
   where,
   writeBatch,
   type DocumentData,
+  type DocumentReference,
   type QueryDocumentSnapshot,
   type Timestamp,
   type Unsubscribe,
@@ -74,9 +75,13 @@ interface AppDataContextValue {
   updateDisplayName: (displayName: string) => Promise<void>;
   createHome: (name: string) => Promise<void>;
   joinHomeWithInviteCode: (inviteCode: string) => Promise<void>;
+  updateHomeName: (name: string) => Promise<void>;
+  removeMember: (userId: string) => Promise<void>;
   createPurchaseRequest: (request: NewPurchaseRequest) => Promise<void>;
+  deletePurchaseRequest: (purchaseId: string) => Promise<void>;
   voteOnPurchase: (purchaseId: string, vote: Vote["vote"], comment?: string) => Promise<void>;
   createReport: (report: NewReport) => Promise<void>;
+  deleteReport: (reportId: string) => Promise<void>;
   voteOnReport: (reportId: string, vote: ReportVote["vote"], comment?: string) => Promise<void>;
 }
 
@@ -335,6 +340,54 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await batch.commit();
   }
 
+  async function updateHomeName(name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName || !currentHouse) {
+      return;
+    }
+
+    if (!db || !authUser) {
+      setCurrentHouse((house) => (house ? { ...house, name: trimmedName } : house));
+      return;
+    }
+
+    if (currentHouse.ownerId !== authUser.uid) {
+      throw new Error("Only the home owner can rename the home.");
+    }
+
+    await updateDoc(doc(db, "houses", currentHouse.id), {
+      name: trimmedName,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async function removeMember(userId: string) {
+    if (!currentHouse || userId === currentHouse.ownerId) {
+      return;
+    }
+
+    if (!db || !authUser) {
+      setMembers((current) => current.filter((member) => member.userId !== userId));
+      return;
+    }
+
+    if (currentHouse.ownerId !== authUser.uid) {
+      throw new Error("Only the home owner can remove members.");
+    }
+
+    const batch = writeBatch(db);
+    batch.delete(doc(db, "houses", currentHouse.id, "members", userId));
+    batch.set(
+      doc(db, "users", userId),
+      {
+        currentHouseId: null,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await batch.commit();
+  }
+
   async function createPurchaseRequest(request: NewPurchaseRequest) {
     if (isFirebaseConfigured && (!db || !authUser || !currentHouse)) {
       setError("Sign in and create or join a home before posting.");
@@ -362,6 +415,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createdAt: serverTimestamp(),
       expiresAt: addDays(new Date(), 7),
     });
+  }
+
+  async function deletePurchaseRequest(purchaseId: string) {
+    const purchase = purchases.find((item) => item.id === purchaseId);
+    if (!purchase) {
+      return;
+    }
+
+    if (!db || !authUser || !currentHouse) {
+      if (purchase.requestedBy === currentUser.userId) {
+        setPurchases((current) => current.filter((item) => item.id !== purchaseId));
+        setPurchaseVotes((current) => {
+          const nextVotes = { ...current };
+          delete nextVotes[purchaseId];
+          return nextVotes;
+        });
+      }
+      return;
+    }
+
+    if (purchase.requestedBy !== authUser.uid) {
+      throw new Error("Only the requester can delete this request.");
+    }
+
+    await deletePostWithVotes(doc(db, "houses", currentHouse.id, "purchases", purchaseId));
   }
 
   async function voteOnPurchase(purchaseId: string, vote: Vote["vote"], comment = "") {
@@ -431,6 +509,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createdAt: serverTimestamp(),
       expiresAt: addDays(new Date(), 7),
     });
+  }
+
+  async function deleteReport(reportId: string) {
+    const report = reports.find((item) => item.id === reportId);
+    if (!report) {
+      return;
+    }
+
+    if (!db || !authUser || !currentHouse) {
+      if (report.reportedBy === currentUser.userId) {
+        setReports((current) => current.filter((item) => item.id !== reportId));
+        setReportVotes((current) => {
+          const nextVotes = { ...current };
+          delete nextVotes[reportId];
+          return nextVotes;
+        });
+      }
+      return;
+    }
+
+    if (report.reportedBy !== authUser.uid) {
+      throw new Error("Only the reporter can delete this report.");
+    }
+
+    await deletePostWithVotes(doc(db, "houses", currentHouse.id, "reports", reportId));
   }
 
   async function voteOnReport(reportId: string, vote: ReportVote["vote"], comment = "") {
@@ -609,9 +712,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         updateDisplayName,
         createHome,
         joinHomeWithInviteCode,
+        updateHomeName,
+        removeMember,
         createPurchaseRequest,
+        deletePurchaseRequest,
         voteOnPurchase,
         createReport,
+        deleteReport,
         voteOnReport,
       }}
     >
@@ -728,6 +835,14 @@ async function deleteExpiredDocs(postsCollection: ReturnType<typeof collection>,
       await batch.commit();
     })
   );
+}
+
+async function deletePostWithVotes(postRef: DocumentReference<DocumentData>) {
+  const votesSnapshot = await getDocs(collection(postRef, "votes"));
+  const batch = writeBatch(postRef.firestore);
+  votesSnapshot.docs.forEach((voteSnapshot) => batch.delete(voteSnapshot.ref));
+  batch.delete(postRef);
+  await batch.commit();
 }
 
 function updatePurchaseStatus(purchases: Purchase[], purchaseId: string, votes: Vote[]): Purchase[] {

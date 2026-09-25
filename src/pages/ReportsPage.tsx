@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, FileWarning, Plus } from "lucide-react";
+import { ChevronRight, FileWarning, Plus, Trash2 } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -27,6 +27,7 @@ export function ReportsPage() {
     reportVotes,
     weeklyReportSummaries,
     createReport,
+    deleteReport,
   } = useAppData();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("open");
@@ -159,6 +160,8 @@ export function ReportsPage() {
               key={report.id}
               report={report}
               agreeCount={(reportVotes[report.id] ?? []).filter((vote) => vote.vote === "agree").length}
+              canDelete={report.reportedBy === currentUser.userId}
+              onDelete={() => deleteReport(report.id)}
             />
           ))
         )}
@@ -167,25 +170,59 @@ export function ReportsPage() {
   );
 }
 
-function ReportCard({ report, agreeCount }: { report: Report; agreeCount: number }) {
+function ReportCard({
+  report,
+  agreeCount,
+  canDelete,
+  onDelete,
+}: {
+  report: Report;
+  agreeCount: number;
+  canDelete: boolean;
+  onDelete: () => Promise<void>;
+}) {
+  const { t } = useLanguage();
+
+  async function handleDelete() {
+    if (!window.confirm(t("confirmDeleteReport"))) {
+      return;
+    }
+    await onDelete();
+  }
+
   return (
-    <Link to={`/reports/${report.id}`} className="pinned-card block">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-display text-lg font-semibold leading-tight text-ink">{report.targetUserName}</p>
-          <p className="mt-0.5 text-sm text-ink-soft">Reported by {report.reportedByName}</p>
+    <article className="pinned-card">
+      <Link to={`/reports/${report.id}`} className="block">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-display text-lg font-semibold leading-tight text-ink">{report.targetUserName}</p>
+            <p className="mt-0.5 text-sm text-ink-soft">Reported by {report.reportedByName}</p>
+          </div>
+          <StatusBadge status={report.status} />
         </div>
-        <StatusBadge status={report.status} />
+        <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{report.comments}</p>
+      </Link>
+      <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink-soft">
+        <Link to={`/reports/${report.id}`} className="min-w-0 flex-1">
+          <span>Clears {formatDate(report.expiresAt)}</span>
+          <span className="ml-2 inline-flex items-center gap-1 font-mono text-xs">
+            {agreeCount}/{report.requiredAgreementCount}
+            <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
+          </span>
+        </Link>
+        {canDelete ? (
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-clay-700 hover:bg-clay-100"
+            aria-label={t("deleteReport")}
+            title={t("deleteReport")}
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+          </button>
+        ) : null}
       </div>
-      <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{report.comments}</p>
-      <div className="mt-3 flex items-center justify-between text-sm text-ink-soft">
-        <span>Clears {formatDate(report.expiresAt)}</span>
-        <span className="flex items-center gap-1 font-mono text-xs">
-          {agreeCount}/{report.requiredAgreementCount}
-          <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
-        </span>
-      </div>
-    </Link>
+    </article>
   );
 }
 

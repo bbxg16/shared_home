@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Check, FileWarning, X } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Check, FileWarning, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAppData } from "@/state/AppDataContext";
+import { useLanguage } from "@/state/LanguageContext";
 import type { ReportVoteType } from "@/types";
 
 export function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser, reports, reportVotes, voteOnReport } = useAppData();
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const { currentUser, reports, reportVotes, voteOnReport, deleteReport } = useAppData();
   const [comment, setComment] = useState("");
   const report = reports.find((item) => item.id === id);
 
@@ -45,6 +48,14 @@ export function ReportDetailPage() {
     setComment("");
   }
 
+  async function handleDelete() {
+    if (!window.confirm(t("confirmDeleteReport"))) {
+      return;
+    }
+    await deleteReport(reportId);
+    navigate("/reports");
+  }
+
   return (
     <div>
       <div className="flex items-center gap-2 px-5 pt-6">
@@ -66,6 +77,17 @@ export function ReportDetailPage() {
       </div>
 
       <div className="flex flex-col gap-4 px-5">
+        {isReporter ? (
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="flex items-center justify-center gap-2 rounded-card border border-clay-500/40 bg-white py-2.5 text-sm font-medium text-clay-700"
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+            {t("deleteReport")}
+          </button>
+        ) : null}
+
         <section className="pinned-card">
           <dl className="flex flex-col gap-2 text-sm">
             <div className="flex justify-between gap-4">

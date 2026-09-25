@@ -12,6 +12,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, create, update: if isSelf(userId);
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["currentHouseId", "updatedAt"])
+        && request.resource.data.currentHouseId == null;
       allow delete: if false;
     }
 
