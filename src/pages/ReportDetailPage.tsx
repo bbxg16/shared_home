@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check, FileWarning, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -11,9 +11,15 @@ export function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { currentUser, reports, reportVotes, voteOnReport, deleteReport } = useAppData();
+  const { currentUser, reports, reportVotes, voteOnReport, deleteReport, respondToReport } = useAppData();
   const [comment, setComment] = useState("");
+  const [targetResponse, setTargetResponse] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
   const report = reports.find((item) => item.id === id);
+
+  useEffect(() => {
+    setTargetResponse(report?.targetResponse ?? "");
+  }, [report?.targetResponse]);
 
   if (!report) {
     return (
@@ -54,6 +60,16 @@ export function ReportDetailPage() {
     }
     await deleteReport(reportId);
     navigate("/reports");
+  }
+
+  async function handleSaveResponse() {
+    setMessage(null);
+    try {
+      await respondToReport(reportId, targetResponse);
+      setMessage(t("responseSaved"));
+    } catch (responseError) {
+      setMessage(responseError instanceof Error ? responseError.message : t("couldNotSaveResponse"));
+    }
   }
 
   return (
@@ -100,6 +116,37 @@ export function ReportDetailPage() {
             </div>
           </dl>
         </section>
+
+        {isTarget || report.targetResponse ? (
+          <section className="pinned-card">
+            <p className="font-display text-base font-semibold text-ink">{t("targetResponse")}</p>
+            {isTarget ? (
+              <>
+                <textarea
+                  value={targetResponse}
+                  onChange={(event) => setTargetResponse(event.target.value)}
+                  placeholder={t("targetResponsePlaceholder")}
+                  rows={3}
+                  className="mt-3 w-full rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+                />
+                <button
+                  type="button"
+                  disabled={!targetResponse.trim()}
+                  onClick={() => void handleSaveResponse()}
+                  className="mt-3 w-full rounded-card bg-sage-500 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {t("saveResponse")}
+                </button>
+                {message ? <p className="mt-2 text-sm text-ink-soft">{message}</p> : null}
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-ink-soft">{report.targetResponse}</p>
+            )}
+            {report.targetRespondedAt ? (
+              <p className="mt-2 font-mono text-xs text-ink-soft">{formatDate(report.targetRespondedAt)}</p>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="pinned-card">
           <p className="font-display text-base font-semibold text-ink">Vote summary</p>

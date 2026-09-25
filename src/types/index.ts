@@ -56,6 +56,8 @@ export interface Report {
   reportedBy: string;
   reportedByName: string;
   comments: string;
+  targetResponse?: string;
+  targetRespondedAt?: string;
   status: ReportStatus;
   eligibleVoterCount: number;
   requiredAgreementCount: number;

@@ -57,6 +57,11 @@ const TEXT = {
     confirmDeleteReport: "Delete this report?",
     couldNotDeleteRequest: "Could not delete request.",
     couldNotDeleteReport: "Could not delete report.",
+    targetResponse: "Reported member response",
+    targetResponsePlaceholder: "Add your response here",
+    saveResponse: "Save response",
+    responseSaved: "Response saved.",
+    couldNotSaveResponse: "Could not save response.",
   },
   zh: {
     home: "首页",
@@ -112,6 +117,11 @@ const TEXT = {
     confirmDeleteReport: "确定要删除这个举报吗？",
     couldNotDeleteRequest: "无法删除申请。",
     couldNotDeleteReport: "无法删除举报。",
+    targetResponse: "被举报人申辩",
+    targetResponsePlaceholder: "在这里写你的申辩说明",
+    saveResponse: "保存申辩",
+    responseSaved: "申辩已保存。",
+    couldNotSaveResponse: "无法保存申辩。",
   },
 } as const;
 

@@ -82,6 +82,7 @@ interface AppDataContextValue {
   voteOnPurchase: (purchaseId: string, vote: Vote["vote"], comment?: string) => Promise<void>;
   createReport: (report: NewReport) => Promise<void>;
   deleteReport: (reportId: string) => Promise<void>;
+  respondToReport: (reportId: string, response: string) => Promise<void>;
   voteOnReport: (reportId: string, vote: ReportVote["vote"], comment?: string) => Promise<void>;
 }
 
@@ -536,6 +537,40 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await deletePostWithVotes(doc(db, "houses", currentHouse.id, "reports", reportId));
   }
 
+  async function respondToReport(reportId: string, response: string) {
+    const trimmedResponse = response.trim();
+    const report = reports.find((item) => item.id === reportId);
+    if (!report || !trimmedResponse) {
+      return;
+    }
+
+    if (!db || !authUser || !currentHouse) {
+      if (report.targetUserId === currentUser.userId) {
+        setReports((current) =>
+          current.map((item) =>
+            item.id === reportId
+              ? {
+                  ...item,
+                  targetResponse: trimmedResponse,
+                  targetRespondedAt: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+      }
+      return;
+    }
+
+    if (report.targetUserId !== authUser.uid) {
+      throw new Error("Only the reported member can respond to this report.");
+    }
+
+    await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), {
+      targetResponse: trimmedResponse,
+      targetRespondedAt: serverTimestamp(),
+    });
+  }
+
   async function voteOnReport(reportId: string, vote: ReportVote["vote"], comment = "") {
     if (isFirebaseConfigured && (!db || !authUser || !currentHouse)) {
       setError("Sign in and join a home before voting.");
@@ -719,6 +754,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         voteOnPurchase,
         createReport,
         deleteReport,
+        respondToReport,
         voteOnReport,
       }}
     >
@@ -793,6 +829,8 @@ function parseReport(snapshot: QueryDocumentSnapshot<DocumentData>): Report {
     reportedBy: String(data.reportedBy ?? ""),
     reportedByName: String(data.reportedByName ?? "Member"),
     comments: String(data.comments ?? ""),
+    targetResponse: data.targetResponse ? String(data.targetResponse) : undefined,
+    targetRespondedAt: data.targetRespondedAt ? dateValueToIso(data.targetRespondedAt) : undefined,
     status: data.status === "agreed" || data.status === "disagreed" || data.status === "expired" ? data.status : "open",
     eligibleVoterCount: Number(data.eligibleVoterCount ?? 1),
     requiredAgreementCount: Number(data.requiredAgreementCount ?? 1),
