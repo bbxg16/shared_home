@@ -412,7 +412,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       requestedByName: getUserDisplayName(authUser, profileDisplayName),
       status: "pending",
       eligibleVoterCount,
-      requiredApprovals: Math.ceil(eligibleVoterCount / 2),
+      requiredApprovals: getMajorityThreshold(eligibleVoterCount),
       createdAt: serverTimestamp(),
       expiresAt: addDays(new Date(), 7),
     });
@@ -455,7 +455,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     const purchase = purchases.find((item) => item.id === purchaseId);
-    if (!purchase || purchase.requestedBy === authUser.uid || purchase.status !== "pending") {
+    if (!purchase || purchase.requestedBy === authUser.uid || purchase.status === "expired") {
       return;
     }
 
@@ -471,6 +471,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const nextVotes = votesSnapshot.docs.map(parseVote);
     const approveCount = nextVotes.filter((item) => item.vote === "approve").length;
     const rejectCount = nextVotes.filter((item) => item.vote === "reject").length;
+
+    if (purchase.status !== "pending") {
+      return;
+    }
 
     if (approveCount >= purchase.requiredApprovals) {
       await updateDoc(doc(db, "houses", currentHouse.id, "purchases", purchaseId), { status: "approved" });
@@ -496,7 +500,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     const reportRef = doc(collection(db, "houses", currentHouse.id, "reports"));
-    const eligibleVoterCount = Math.max(members.length - 2, 1);
+    const eligibleVoterCount = Math.max(members.length, 1);
 
     await setDoc(reportRef, {
       targetUserId: targetMember.userId,
@@ -506,7 +510,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       comments: report.comments,
       status: "open",
       eligibleVoterCount,
-      requiredAgreementCount: Math.ceil(eligibleVoterCount / 2),
+      requiredAgreementCount: getMajorityThreshold(eligibleVoterCount),
       createdAt: serverTimestamp(),
       expiresAt: addDays(new Date(), 7),
     });
@@ -583,7 +587,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     const report = reports.find((item) => item.id === reportId);
-    if (!report || report.reportedBy === authUser.uid || report.targetUserId === authUser.uid || report.status !== "open") {
+    if (!report || report.status === "expired") {
       return;
     }
 
@@ -599,6 +603,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const nextVotes = votesSnapshot.docs.map(parseReportVote);
     const agreeCount = nextVotes.filter((item) => item.vote === "agree").length;
     const disagreeCount = nextVotes.filter((item) => item.vote === "disagree").length;
+
+    if (report.status !== "open") {
+      return;
+    }
 
     if (agreeCount >= report.requiredAgreementCount) {
       await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), { status: "agreed" });
@@ -618,7 +626,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         requestedByName: currentUser.displayName,
         status: "pending",
         eligibleVoterCount,
-        requiredApprovals: Math.ceil(eligibleVoterCount / 2),
+        requiredApprovals: getMajorityThreshold(eligibleVoterCount),
         createdAt: createdAt.toISOString(),
         expiresAt: addDays(createdAt, 7).toISOString(),
       },
@@ -649,7 +657,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function createMockReport(report: NewReport) {
     const createdAt = new Date();
     const targetMember = members.find((member) => member.userId === report.targetUserId);
-    const eligibleVoterCount = Math.max(members.length - 2, 1);
+    const eligibleVoterCount = Math.max(members.length, 1);
     if (!targetMember) {
       return;
     }
@@ -664,7 +672,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         comments: report.comments,
         status: "open",
         eligibleVoterCount,
-        requiredAgreementCount: Math.ceil(eligibleVoterCount / 2),
+        requiredAgreementCount: getMajorityThreshold(eligibleVoterCount),
         createdAt: createdAt.toISOString(),
         expiresAt: addDays(createdAt, 7).toISOString(),
       },
@@ -940,6 +948,10 @@ function addDays(date: Date, days: number) {
 
 function generateInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function getMajorityThreshold(voterCount: number) {
+  return Math.floor(voterCount / 2) + 1;
 }
 
 function getUserDisplayName(user: User, profileDisplayName?: string | null) {

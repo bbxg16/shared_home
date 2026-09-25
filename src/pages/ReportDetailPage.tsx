@@ -43,7 +43,7 @@ export function ReportDetailPage() {
   const isReporter = report.reportedBy === currentUser.userId;
   const isTarget = report.targetUserId === currentUser.userId;
   const alreadyVoted = votes.some((vote) => vote.userId === currentUser.userId);
-  const canVote = !isReporter && !isTarget && report.status === "open";
+  const canVote = !alreadyVoted && report.status !== "expired";
   const reportId = report.id;
 
   function submitVote(vote: ReportVoteType) {
@@ -176,7 +176,7 @@ export function ReportDetailPage() {
 
         <section>
           <p className="mb-2 text-center text-xs text-ink-soft">
-            {isReporter || isTarget ? "Reporter and reported member do not vote." : alreadyVoted ? "Your latest vote is recorded." : "Add a comment with your vote."}
+            {alreadyVoted ? "Your vote is recorded." : "Add a comment with your vote."}
           </p>
           {canVote ? (
             <textarea

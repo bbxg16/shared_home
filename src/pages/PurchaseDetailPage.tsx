@@ -36,7 +36,7 @@ export function PurchaseDetailPage() {
   const rejectCount = votes.filter((vote) => vote.vote === "reject").length;
   const isRequester = purchase.requestedBy === currentUser.userId;
   const alreadyVoted = votes.some((vote) => vote.userId === currentUser.userId);
-  const canVote = !isRequester && purchase.status === "pending";
+  const canVote = !isRequester && !alreadyVoted && purchase.status !== "expired";
   const purchaseId = purchase.id;
 
   function submitVote(vote: VoteType) {
@@ -145,7 +145,7 @@ export function PurchaseDetailPage() {
 
         <section>
           <p className="mb-2 text-center text-xs text-ink-soft">
-            {isRequester ? "You can track status here. Other members vote." : alreadyVoted ? "Your latest vote is recorded." : "Add a comment with your vote."}
+            {isRequester ? "You can track status here. Other members vote." : alreadyVoted ? "Your vote is recorded." : "Add a comment with your vote."}
           </p>
           {canVote ? (
             <textarea
