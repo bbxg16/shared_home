@@ -10,7 +10,7 @@ export function HomePage() {
   const pendingPurchaseCount = purchases.filter((purchase) => purchase.status === "pending").length;
   const openReportCount = reports.filter((report) => report.status === "open").length;
   const myRequestCount = purchases.filter((purchase) => purchase.requestedBy === currentUser.userId).length;
-  const houseName = currentHouse?.name ?? (isFirebaseMode ? "No home joined" : "Demo Home");
+  const houseName = currentHouse?.name ?? (isFirebaseMode ? "No home joined" : "有本要奏 Demo");
   const modeLabel = isFirebaseMode
     ? authUser
       ? t("firebaseLive")
@@ -19,7 +19,7 @@ export function HomePage() {
 
   return (
     <div>
-      <AppHeader title="审批小程序 · Approval Home" subtitle={`${houseName} · ${members.length} members`} />
+      <AppHeader title="有本要奏" subtitle={`${houseName} · ${members.length} members`} />
 
       <div className="flex flex-col gap-4 px-5">
         <div className={`rounded-card px-3 py-2 text-xs font-medium ${isFirebaseMode ? "bg-sage-100 text-sage-700" : "bg-honey-100 text-honey-700"}`}>

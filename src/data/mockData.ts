@@ -9,7 +9,7 @@ import type {
 
 export const mockHouse: House = {
   id: "house-demo-1",
-  name: "Demo Home",
+  name: "有本要奏 Demo",
   ownerId: "user-1",
   inviteCode: "DEMO-4821",
 };

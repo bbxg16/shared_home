@@ -25,7 +25,7 @@ export function HousePage() {
     updateDisplayName,
   } = useAppData();
   const { t } = useLanguage();
-  const [homeName, setHomeName] = useState("Approval Home");
+  const [homeName, setHomeName] = useState("有本要奏");
   const [nextHouseName, setNextHouseName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [displayName, setDisplayName] = useState(currentUser.displayName);

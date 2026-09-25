@@ -1,4 +1,4 @@
-# 审批小程序 · Approval Home
+# 有本要奏
 
 A mobile-first web app for housemates to join one home, submit purchase requests, and file/report household issues for group voting.
 
