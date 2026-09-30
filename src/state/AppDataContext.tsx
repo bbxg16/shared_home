@@ -45,6 +45,7 @@ import type {
   ReportVote,
   Vote,
   WeeklyReportSummary,
+  HouseActivity,
 } from "@/types";
 
 interface NewPurchaseRequest {
@@ -69,6 +70,7 @@ interface AppDataContextValue {
   reports: Report[];
   reportVotes: Record<string, ReportVote[]>;
   weeklyReportSummaries: WeeklyReportSummary[];
+  activityEvents: HouseActivity[];
   isFirebaseMode: boolean;
   isLoading: boolean;
   error: string | null;
@@ -96,6 +98,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [purchaseVotes, setPurchaseVotes] = useState<Record<string, Vote[]>>(isFirebaseConfigured ? {} : mockVotes);
   const [reports, setReports] = useState<Report[]>(isFirebaseConfigured ? [] : mockReports);
   const [reportVotes, setReportVotes] = useState<Record<string, ReportVote[]>>(isFirebaseConfigured ? {} : mockReportVotes);
+  const [activityEvents, setActivityEvents] = useState<HouseActivity[]>([]);
   const [isLoading, setIsLoading] = useState(isFirebaseConfigured);
   const [error, setError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
@@ -123,6 +126,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
   }, [members, reports]);
 
+  function addActivityEvent(event: HouseActivity) {
+    setActivityEvents((current) => {
+      if (current.some((item) => item.id === event.id)) {
+        return current;
+      }
+      return [...current.slice(-9), event];
+    });
+  }
+
   useEffect(() => {
     if (!isFirebaseConfigured) {
       setIsLoading(false);
@@ -139,6 +151,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setPurchaseVotes({});
         setReports([]);
         setReportVotes({});
+        setActivityEvents([]);
       }
     });
   }, []);
@@ -166,6 +179,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           setPurchaseVotes({});
           setReports([]);
           setReportVotes({});
+          setActivityEvents([]);
           return;
         }
 
@@ -184,6 +198,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     const houseId = currentHouse.id;
+    let hasLoadedPurchases = false;
+    let hasLoadedReports = false;
     const unsubscribes: Unsubscribe[] = [
       onSnapshot(
         doc(db, "houses", houseId),
@@ -201,12 +217,64 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ),
       onSnapshot(
         query(collection(db, "houses", houseId, "purchases"), orderBy("createdAt", "desc")),
-        (snapshot) => setPurchases(snapshot.docs.map(parsePurchase)),
+        (snapshot) => {
+          setPurchases(snapshot.docs.map(parsePurchase));
+          if (hasLoadedPurchases) {
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === "removed") {
+                return;
+              }
+              const purchase = parsePurchase(change.doc);
+              const action = change.type === "added" ? "created" : purchase.lastActivityType;
+              const createdBy = change.type === "added" ? purchase.requestedBy : purchase.lastActivityBy;
+              if (
+                (action === "created" || action === "voted") &&
+                createdBy &&
+                createdBy !== authUser.uid
+              ) {
+                addActivityEvent({
+                  id: `purchase-${purchase.id}-${action}-${purchase.lastActivityAt}`,
+                  kind: "purchase",
+                  action,
+                  createdBy,
+                  createdAt: purchase.lastActivityAt,
+                });
+              }
+            });
+          }
+          hasLoadedPurchases = true;
+        },
         (snapshotError) => setError(formatFirebaseError(snapshotError.message))
       ),
       onSnapshot(
         query(collection(db, "houses", houseId, "reports"), orderBy("createdAt", "desc")),
-        (snapshot) => setReports(snapshot.docs.map(parseReport)),
+        (snapshot) => {
+          setReports(snapshot.docs.map(parseReport));
+          if (hasLoadedReports) {
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === "removed") {
+                return;
+              }
+              const report = parseReport(change.doc);
+              const action = change.type === "added" ? "created" : report.lastActivityType;
+              const createdBy = change.type === "added" ? report.reportedBy : report.lastActivityBy;
+              if (
+                (action === "created" || action === "voted" || action === "responded") &&
+                createdBy &&
+                createdBy !== authUser.uid
+              ) {
+                addActivityEvent({
+                  id: `report-${report.id}-${action}-${report.lastActivityAt}`,
+                  kind: "report",
+                  action,
+                  createdBy,
+                  createdAt: report.lastActivityAt,
+                });
+              }
+            });
+          }
+          hasLoadedReports = true;
+        },
         (snapshotError) => setError(formatFirebaseError(snapshotError.message))
       ),
     ];
@@ -415,6 +483,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       requiredApprovals: getMajorityThreshold(eligibleVoterCount),
       createdAt: serverTimestamp(),
       lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "created",
       expiresAt: addDays(new Date(), 7),
     });
   }
@@ -473,6 +543,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await updateDoc(doc(db, "houses", currentHouse.id, "purchases", purchaseId), {
       status: getPurchaseStatusFromVotes(purchase, nextVotes),
       lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "voted",
     });
   }
 
@@ -506,6 +578,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       requiredAgreementCount: getMajorityThreshold(eligibleVoterCount),
       createdAt: serverTimestamp(),
       lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "created",
       expiresAt: addDays(new Date(), 7),
     });
   }
@@ -566,6 +640,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), {
       targetResponse: trimmedResponse,
       targetRespondedAt: serverTimestamp(),
+      lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "responded",
     });
   }
 
@@ -598,6 +675,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), {
       status: getReportStatusFromVotes(report, nextVotes),
       lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "voted",
     });
   }
 
@@ -615,6 +694,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         requiredApprovals: getMajorityThreshold(eligibleVoterCount),
         createdAt: createdAt.toISOString(),
         lastActivityAt: createdAt.toISOString(),
+        lastActivityBy: currentUser.userId,
+        lastActivityType: "created",
         expiresAt: addDays(createdAt, 7).toISOString(),
       },
       ...current,
@@ -663,6 +744,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         requiredAgreementCount: getMajorityThreshold(eligibleVoterCount),
         createdAt: createdAt.toISOString(),
         lastActivityAt: createdAt.toISOString(),
+        lastActivityBy: currentUser.userId,
+        lastActivityType: "created",
         expiresAt: addDays(createdAt, 7).toISOString(),
       },
       ...current,
@@ -739,6 +822,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         reports,
         reportVotes,
         weeklyReportSummaries,
+        activityEvents,
         isFirebaseMode: isFirebaseConfigured,
         isLoading,
         error,
@@ -804,6 +888,8 @@ function parsePurchase(snapshot: QueryDocumentSnapshot<DocumentData>): Purchase 
     requiredApprovals: Number(data.requiredApprovals ?? 1),
     createdAt: dateValueToIso(data.createdAt),
     lastActivityAt: data.lastActivityAt ? dateValueToIso(data.lastActivityAt) : dateValueToIso(data.createdAt),
+    lastActivityBy: data.lastActivityBy ? String(data.lastActivityBy) : undefined,
+    lastActivityType: data.lastActivityType === "voted" ? "voted" : data.lastActivityType === "created" ? "created" : undefined,
     expiresAt: dateValueToIso(data.expiresAt),
   };
 }
@@ -835,6 +921,11 @@ function parseReport(snapshot: QueryDocumentSnapshot<DocumentData>): Report {
     requiredAgreementCount: Number(data.requiredAgreementCount ?? 1),
     createdAt: dateValueToIso(data.createdAt),
     lastActivityAt: data.lastActivityAt ? dateValueToIso(data.lastActivityAt) : dateValueToIso(data.createdAt),
+    lastActivityBy: data.lastActivityBy ? String(data.lastActivityBy) : undefined,
+    lastActivityType:
+      data.lastActivityType === "voted" || data.lastActivityType === "created" || data.lastActivityType === "responded"
+        ? data.lastActivityType
+        : undefined,
     expiresAt: dateValueToIso(data.expiresAt),
   };
 }

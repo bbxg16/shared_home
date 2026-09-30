@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "@/App";
 import { AppDataProvider } from "@/state/AppDataContext";
 import { LanguageProvider } from "@/state/LanguageContext";
+import { NotificationProvider } from "@/state/NotificationContext";
 import "@/index.css";
 import "@/lib/firebase";
 
@@ -15,7 +16,9 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter basename={routerBasename}>
       <LanguageProvider>
         <AppDataProvider>
-          <App />
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
         </AppDataProvider>
       </LanguageProvider>
     </BrowserRouter>

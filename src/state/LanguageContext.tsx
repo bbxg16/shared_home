@@ -138,6 +138,11 @@ const TEXT = {
     openReportsThisWeek: "{count} open this week",
     inviteAndMembers: "invite and members",
     signedInAs: "{count} members · signed in as {name}",
+    notificationTitle: "New update",
+    notificationBody: "Someone in your house made an update. Open the app to check.",
+    enableNotifications: "Enable notifications",
+    notificationsOn: "Notifications on",
+    notificationsBlocked: "Notifications blocked in browser settings",
   },
   zh: {
     appName: "有本要奏",
@@ -274,6 +279,11 @@ const TEXT = {
     openReportsThisWeek: "本周 {count} 个进行中",
     inviteAndMembers: "邀请码和同僚",
     signedInAs: "{count} 位同僚 · 当前用户 {name}",
+    notificationTitle: "小朝廷有新动静",
+    notificationBody: "有人提交或批了新内容，打开有本要奏看看。",
+    enableNotifications: "开启通知",
+    notificationsOn: "通知已开启",
+    notificationsBlocked: "通知已被浏览器阻止",
   },
 } as const;
 

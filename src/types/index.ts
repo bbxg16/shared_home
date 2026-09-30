@@ -39,6 +39,8 @@ export interface Purchase {
   requiredApprovals: number;
   createdAt: string;
   lastActivityAt: string;
+  lastActivityBy?: string;
+  lastActivityType?: "created" | "voted";
   expiresAt: string;
 }
 
@@ -64,6 +66,8 @@ export interface Report {
   requiredAgreementCount: number;
   createdAt: string;
   lastActivityAt: string;
+  lastActivityBy?: string;
+  lastActivityType?: "created" | "voted" | "responded";
   expiresAt: string;
 }
 
@@ -81,4 +85,12 @@ export interface WeeklyReportSummary {
   receivedCount: number;
   agreedCount: number;
   disagreedCount: number;
+}
+
+export interface HouseActivity {
+  id: string;
+  kind: "purchase" | "report";
+  action: "created" | "voted" | "responded";
+  createdBy: string;
+  createdAt: string;
 }
