@@ -90,7 +90,7 @@ export function HousePage() {
       return;
     }
     await navigator.clipboard.writeText(house.inviteCode);
-    setMessage("Invite code copied.");
+    setMessage(t("copiedInviteCode"));
   }
 
   async function handleCreateHome() {
@@ -102,9 +102,9 @@ export function HousePage() {
     setMessage(null);
     try {
       await createHome(homeName.trim());
-      setMessage("Home created. Share the invite code with your members.");
+      setMessage(t("homeCreated"));
     } catch (createError) {
-      setMessage(createError instanceof Error ? createError.message : "Could not create home.");
+      setMessage(createError instanceof Error ? createError.message : t("couldNotCreateHome"));
     } finally {
       setIsWorking(false);
     }
@@ -120,9 +120,9 @@ export function HousePage() {
     try {
       await joinHomeWithInviteCode(inviteCode);
       setInviteCode("");
-      setMessage("Joined home.");
+      setMessage(t("joinedHome"));
     } catch (joinError) {
-      setMessage(joinError instanceof Error ? joinError.message : "Could not join home.");
+      setMessage(joinError instanceof Error ? joinError.message : t("couldNotJoinHome"));
     } finally {
       setIsWorking(false);
     }
@@ -133,9 +133,9 @@ export function HousePage() {
     setMessage(null);
     try {
       await updateDisplayName(displayName);
-      setMessage("Name saved.");
+      setMessage(t("nameSaved"));
     } catch (nameError) {
-      setMessage(nameError instanceof Error ? nameError.message : "Could not save name.");
+      setMessage(nameError instanceof Error ? nameError.message : t("couldNotSaveName"));
     } finally {
       setIsWorking(false);
     }

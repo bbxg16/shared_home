@@ -1,26 +1,28 @@
 import type { PurchaseStatus, ReportStatus } from "@/types";
+import { useLanguage } from "@/state/LanguageContext";
 
 interface StatusBadgeProps {
   status: PurchaseStatus | ReportStatus;
 }
 
-const STATUS_STYLES: Record<PurchaseStatus | ReportStatus, { label: string; className: string }> = {
-  pending: { label: "Pending", className: "bg-honey-100 text-honey-700" },
-  approved: { label: "Approved", className: "bg-sage-100 text-sage-700" },
-  rejected: { label: "Rejected", className: "bg-clay-100 text-clay-700" },
-  open: { label: "Open", className: "bg-honey-100 text-honey-700" },
-  agreed: { label: "Agreed", className: "bg-sage-100 text-sage-700" },
-  disagreed: { label: "Disagreed", className: "bg-clay-100 text-clay-700" },
-  expired: { label: "Expired", className: "bg-ink/[0.06] text-ink-soft" },
+const STATUS_STYLES: Record<PurchaseStatus | ReportStatus, { labelKey: Parameters<ReturnType<typeof useLanguage>["t"]>[0]; className: string }> = {
+  pending: { labelKey: "statusPending", className: "bg-honey-100 text-honey-700" },
+  approved: { labelKey: "statusApproved", className: "bg-sage-100 text-sage-700" },
+  rejected: { labelKey: "statusRejected", className: "bg-clay-100 text-clay-700" },
+  open: { labelKey: "statusOpen", className: "bg-honey-100 text-honey-700" },
+  agreed: { labelKey: "statusAgreed", className: "bg-sage-100 text-sage-700" },
+  disagreed: { labelKey: "statusDisagreed", className: "bg-clay-100 text-clay-700" },
+  expired: { labelKey: "statusExpired", className: "bg-ink/[0.06] text-ink-soft" },
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const { label, className } = STATUS_STYLES[status];
+  const { t } = useLanguage();
+  const { labelKey, className } = STATUS_STYLES[status];
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-wide ${className}`}
     >
-      {label}
+      {t(labelKey)}
     </span>
   );
 }

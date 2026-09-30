@@ -14,7 +14,7 @@ export function BottomNavigation() {
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label={t("primaryNavigation")}
       className="sticky bottom-0 z-10 border-t border-ink/10 bg-white/95 backdrop-blur"
     >
       <ul className="mx-auto flex max-w-app items-stretch justify-between px-2">

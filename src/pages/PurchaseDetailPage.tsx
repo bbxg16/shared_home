@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check, ExternalLink, Tags, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -10,33 +10,38 @@ import type { VoteType } from "@/types";
 export function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const { currentUser, purchases, purchaseVotes, voteOnPurchase, deletePurchaseRequest } = useAppData();
   const [comment, setComment] = useState("");
   const purchase = purchases.find((item) => item.id === id);
+  const votes = purchaseVotes[purchase?.id ?? ""] ?? [];
+  const currentVote = votes.find((vote) => vote.userId === currentUser.userId);
+
+  useEffect(() => {
+    setComment(currentVote?.comment ?? "");
+  }, [currentVote?.comment, currentVote?.vote, purchase?.id]);
 
   if (!purchase) {
     return (
       <div>
         <div className="px-5 pt-6">
-          <h1 className="font-display text-2xl font-semibold text-ink">Request not found</h1>
+          <h1 className="font-display text-2xl font-semibold text-ink">{t("requestNotFound")}</h1>
         </div>
         <div className="px-5">
-          <EmptyState icon={Tags} title="We couldn't find that request" />
+          <EmptyState icon={Tags} title={t("requestNotFoundDescription")} />
           <Link to="/purchases" className="mt-4 block text-center text-sm font-medium text-sage-700">
-            Back to requests
+            {t("backToRequests")}
           </Link>
         </div>
       </div>
     );
   }
 
-  const votes = purchaseVotes[purchase.id] ?? [];
   const approveCount = votes.filter((vote) => vote.vote === "approve").length;
   const rejectCount = votes.filter((vote) => vote.vote === "reject").length;
+  const totalVoteCount = votes.length;
   const isRequester = purchase.requestedBy === currentUser.userId;
-  const alreadyVoted = votes.some((vote) => vote.userId === currentUser.userId);
-  const canVote = !isRequester && !alreadyVoted && purchase.status !== "expired";
+  const canVote = !isRequester && purchase.status !== "expired";
   const purchaseId = purchase.id;
 
   function submitVote(vote: VoteType) {
@@ -44,7 +49,6 @@ export function PurchaseDetailPage() {
       return;
     }
     voteOnPurchase(purchaseId, vote, comment);
-    setComment("");
   }
 
   async function handleDelete() {
@@ -61,7 +65,7 @@ export function PurchaseDetailPage() {
         <Link
           to="/purchases"
           className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-ink/5"
-          aria-label="Back to requests"
+          aria-label={t("backToRequests")}
         >
           <ArrowLeft className="h-5 w-5" strokeWidth={1.75} />
         </Link>
@@ -72,7 +76,7 @@ export function PurchaseDetailPage() {
           <h1 className="font-display text-2xl font-semibold leading-tight text-ink">{purchase.name}</h1>
           <StatusBadge status={purchase.status} />
         </div>
-        <p className="mt-1 text-sm text-ink-soft">Requested by {purchase.requestedByName}</p>
+        <p className="mt-1 text-sm text-ink-soft">{t("requestedBy").replace("{name}", purchase.requestedByName)}</p>
       </div>
 
       <div className="flex flex-col gap-4 px-5">
@@ -91,17 +95,17 @@ export function PurchaseDetailPage() {
           <dl className="flex flex-col gap-2 text-sm">
             {purchase.price ? (
               <div className="flex justify-between">
-                <dt className="text-ink-soft">Price</dt>
+                <dt className="text-ink-soft">{t("price")}</dt>
                 <dd className="font-mono font-medium text-ink">{purchase.price}</dd>
               </div>
             ) : null}
             <div className="flex justify-between gap-4">
-              <dt className="flex-shrink-0 text-ink-soft">Description</dt>
+              <dt className="flex-shrink-0 text-ink-soft">{t("description")}</dt>
               <dd className="text-right text-ink">{purchase.description}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-ink-soft">Clears after</dt>
-              <dd className="font-mono text-xs text-ink">{formatDate(purchase.expiresAt)}</dd>
+              <dt className="text-ink-soft">{t("clearsAfter")}</dt>
+              <dd className="font-mono text-xs text-ink">{formatDate(purchase.expiresAt, language)}</dd>
             </div>
             {purchase.productUrl ? (
               <a
@@ -110,7 +114,7 @@ export function PurchaseDetailPage() {
                 rel="noreferrer"
                 className="mt-1 flex items-center justify-between text-harbor-500"
               >
-                View product link
+                {t("viewProductLink")}
                 <ExternalLink className="h-4 w-4" strokeWidth={1.75} />
               </a>
             ) : null}
@@ -120,10 +124,13 @@ export function PurchaseDetailPage() {
         <section className="pinned-card">
           <p className="font-display text-base font-semibold text-ink">{t("reviewMemorial")}</p>
           <p className="mt-1 text-sm text-ink-soft">
-            {approveCount} {t("approveAction")} · {rejectCount} {t("rejectAction")} ·{" "}
-            {t("needsVotes")
-              .replace("{required}", String(purchase.requiredApprovals))
-              .replace("{total}", String(purchase.eligibleVoterCount))}
+            {t("approvalProgress")
+              .replace("{positive}", String(approveCount))
+              .replace("{positiveLabel}", t("approveAction"))
+              .replace("{negative}", String(rejectCount))
+              .replace("{negativeLabel}", t("rejectAction"))
+              .replace("{totalVotes}", String(totalVoteCount))
+              .replace("{totalVoters}", String(purchase.eligibleVoterCount))}
           </p>
 
           {votes.length > 0 ? (
@@ -131,9 +138,11 @@ export function PurchaseDetailPage() {
               {votes.map((vote) => (
                 <li key={vote.userId} className="text-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-ink">{vote.userName}</span>
+                    <span className="text-ink">
+                      {vote.userId === currentUser.userId ? t("currentUser") : vote.userName}
+                    </span>
                     <span className={`font-mono text-xs uppercase ${vote.vote === "approve" ? "text-sage-700" : "text-clay-700"}`}>
-                      {vote.vote}
+                      {vote.vote === "approve" ? t("approveAction") : t("rejectAction")}
                     </span>
                   </div>
                   {vote.comment ? <p className="mt-0.5 text-ink-soft">{vote.comment}</p> : null}
@@ -141,19 +150,19 @@ export function PurchaseDetailPage() {
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-ink-soft">No votes yet.</p>
+            <p className="mt-3 text-sm text-ink-soft">{t("noVoteDetails")}</p>
           )}
         </section>
 
         <section>
           <p className="mb-2 text-center text-xs text-ink-soft">
-            {isRequester ? "You can track status here. Other members vote." : alreadyVoted ? "Your vote is recorded." : "Add a comment with your vote."}
+            {isRequester ? t("requesterVoteHint") : currentVote ? t("changeVoteHint") : t("voteHint")}
           </p>
           {canVote ? (
             <textarea
               value={comment}
               onChange={(event) => setComment(event.target.value)}
-              placeholder="Comment optional"
+              placeholder={t("commentOptional")}
               rows={2}
               className="mb-3 w-full rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
             />
@@ -163,7 +172,11 @@ export function PurchaseDetailPage() {
               type="button"
               disabled={!canVote}
               onClick={() => submitVote("reject")}
-              className="flex flex-1 items-center justify-center gap-2 rounded-card border-2 border-clay-500/40 py-3 font-medium text-clay-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-card border-2 py-3 font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+                currentVote?.vote === "reject"
+                  ? "border-clay-500 bg-clay-100 text-clay-700"
+                  : "border-clay-500/40 text-clay-700"
+              }`}
             >
               <X className="h-4 w-4" strokeWidth={2.5} />
               {t("rejectAction")}
@@ -172,7 +185,11 @@ export function PurchaseDetailPage() {
               type="button"
               disabled={!canVote}
               onClick={() => submitVote("approve")}
-              className="flex flex-1 items-center justify-center gap-2 rounded-card border-2 border-sage-500/50 py-3 font-medium text-sage-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-card border-2 py-3 font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+                currentVote?.vote === "approve"
+                  ? "border-sage-500 bg-sage-100 text-sage-700"
+                  : "border-sage-500/50 text-sage-700"
+              }`}
             >
               <Check className="h-4 w-4" strokeWidth={2.5} />
               {t("approveAction")}
@@ -184,6 +201,6 @@ export function PurchaseDetailPage() {
   );
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value));
+function formatDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en", { month: "short", day: "numeric" }).format(new Date(value));
 }

@@ -112,7 +112,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const weeklyReportSummaries = useMemo(() => {
     return members.map((member) => {
-      const receivedReports = reports.filter((report) => report.targetUserId === member.userId);
+      const receivedReports = reports.filter((report) => report.targetUserId === member.userId && report.status !== "expired");
       return {
         userId: member.userId,
         userName: member.displayName,
@@ -414,6 +414,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       eligibleVoterCount,
       requiredApprovals: getMajorityThreshold(eligibleVoterCount),
       createdAt: serverTimestamp(),
+      lastActivityAt: serverTimestamp(),
       expiresAt: addDays(new Date(), 7),
     });
   }
@@ -469,18 +470,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     const votesSnapshot = await getDocs(collection(db, "houses", currentHouse.id, "purchases", purchaseId, "votes"));
     const nextVotes = votesSnapshot.docs.map(parseVote);
-    const approveCount = nextVotes.filter((item) => item.vote === "approve").length;
-    const rejectCount = nextVotes.filter((item) => item.vote === "reject").length;
-
-    if (purchase.status !== "pending") {
-      return;
-    }
-
-    if (approveCount >= purchase.requiredApprovals) {
-      await updateDoc(doc(db, "houses", currentHouse.id, "purchases", purchaseId), { status: "approved" });
-    } else if (rejectCount >= purchase.requiredApprovals) {
-      await updateDoc(doc(db, "houses", currentHouse.id, "purchases", purchaseId), { status: "rejected" });
-    }
+    await updateDoc(doc(db, "houses", currentHouse.id, "purchases", purchaseId), {
+      status: getPurchaseStatusFromVotes(purchase, nextVotes),
+      lastActivityAt: serverTimestamp(),
+    });
   }
 
   async function createReport(report: NewReport) {
@@ -512,6 +505,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       eligibleVoterCount,
       requiredAgreementCount: getMajorityThreshold(eligibleVoterCount),
       createdAt: serverTimestamp(),
+      lastActivityAt: serverTimestamp(),
       expiresAt: addDays(new Date(), 7),
     });
   }
@@ -601,18 +595,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     const votesSnapshot = await getDocs(collection(db, "houses", currentHouse.id, "reports", reportId, "votes"));
     const nextVotes = votesSnapshot.docs.map(parseReportVote);
-    const agreeCount = nextVotes.filter((item) => item.vote === "agree").length;
-    const disagreeCount = nextVotes.filter((item) => item.vote === "disagree").length;
-
-    if (report.status !== "open") {
-      return;
-    }
-
-    if (agreeCount >= report.requiredAgreementCount) {
-      await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), { status: "agreed" });
-    } else if (disagreeCount >= report.requiredAgreementCount) {
-      await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), { status: "disagreed" });
-    }
+    await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), {
+      status: getReportStatusFromVotes(report, nextVotes),
+      lastActivityAt: serverTimestamp(),
+    });
   }
 
   function createMockPurchaseRequest(request: NewPurchaseRequest) {
@@ -628,6 +614,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         eligibleVoterCount,
         requiredApprovals: getMajorityThreshold(eligibleVoterCount),
         createdAt: createdAt.toISOString(),
+        lastActivityAt: createdAt.toISOString(),
         expiresAt: addDays(createdAt, 7).toISOString(),
       },
       ...current,
@@ -642,6 +629,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       comment: comment.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
+    const activityAt = nextVote.createdAt;
 
     let nextVotes: Vote[] = [];
     setPurchaseVotes((current) => {
@@ -651,7 +639,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ];
       return { ...current, [purchaseId]: nextVotes };
     });
-    setPurchases((current) => updatePurchaseStatus(current, purchaseId, nextVotes));
+    setPurchases((current) => updatePurchaseStatus(current, purchaseId, nextVotes, activityAt));
   }
 
   function createMockReport(report: NewReport) {
@@ -674,6 +662,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         eligibleVoterCount,
         requiredAgreementCount: getMajorityThreshold(eligibleVoterCount),
         createdAt: createdAt.toISOString(),
+        lastActivityAt: createdAt.toISOString(),
         expiresAt: addDays(createdAt, 7).toISOString(),
       },
       ...current,
@@ -688,6 +677,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       comment: comment.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
+    const activityAt = nextVote.createdAt;
 
     let nextVotes: ReportVote[] = [];
     setReportVotes((current) => {
@@ -697,7 +687,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ];
       return { ...current, [reportId]: nextVotes };
     });
-    setReports((current) => updateReportStatus(current, reportId, nextVotes));
+    setReports((current) => updateReportStatus(current, reportId, nextVotes, activityAt));
   }
 
   async function updateDisplayName(displayName: string) {
@@ -813,6 +803,7 @@ function parsePurchase(snapshot: QueryDocumentSnapshot<DocumentData>): Purchase 
     eligibleVoterCount: Number(data.eligibleVoterCount ?? 1),
     requiredApprovals: Number(data.requiredApprovals ?? 1),
     createdAt: dateValueToIso(data.createdAt),
+    lastActivityAt: data.lastActivityAt ? dateValueToIso(data.lastActivityAt) : dateValueToIso(data.createdAt),
     expiresAt: dateValueToIso(data.expiresAt),
   };
 }
@@ -843,6 +834,7 @@ function parseReport(snapshot: QueryDocumentSnapshot<DocumentData>): Report {
     eligibleVoterCount: Number(data.eligibleVoterCount ?? 1),
     requiredAgreementCount: Number(data.requiredAgreementCount ?? 1),
     createdAt: dateValueToIso(data.createdAt),
+    lastActivityAt: data.lastActivityAt ? dateValueToIso(data.lastActivityAt) : dateValueToIso(data.createdAt),
     expiresAt: dateValueToIso(data.expiresAt),
   };
 }
@@ -891,40 +883,56 @@ async function deletePostWithVotes(postRef: DocumentReference<DocumentData>) {
   await batch.commit();
 }
 
-function updatePurchaseStatus(purchases: Purchase[], purchaseId: string, votes: Vote[]): Purchase[] {
+function updatePurchaseStatus(purchases: Purchase[], purchaseId: string, votes: Vote[], activityAt: string): Purchase[] {
   return purchases.map((purchase) => {
-    if (purchase.id !== purchaseId || purchase.status !== "pending") {
+    if (purchase.id !== purchaseId || purchase.status === "expired") {
       return purchase;
     }
 
-    const approveCount = votes.filter((item) => item.vote === "approve").length;
-    const rejectCount = votes.filter((item) => item.vote === "reject").length;
-    if (approveCount >= purchase.requiredApprovals) {
-      return { ...purchase, status: "approved" as const };
-    }
-    if (rejectCount >= purchase.requiredApprovals) {
-      return { ...purchase, status: "rejected" as const };
-    }
-    return purchase;
+    return {
+      ...purchase,
+      status: getPurchaseStatusFromVotes(purchase, votes),
+      lastActivityAt: activityAt,
+    };
   });
 }
 
-function updateReportStatus(reports: Report[], reportId: string, votes: ReportVote[]): Report[] {
+function updateReportStatus(reports: Report[], reportId: string, votes: ReportVote[], activityAt: string): Report[] {
   return reports.map((report) => {
-    if (report.id !== reportId || report.status !== "open") {
+    if (report.id !== reportId || report.status === "expired") {
       return report;
     }
 
-    const agreeCount = votes.filter((item) => item.vote === "agree").length;
-    const disagreeCount = votes.filter((item) => item.vote === "disagree").length;
-    if (agreeCount >= report.requiredAgreementCount) {
-      return { ...report, status: "agreed" as const };
-    }
-    if (disagreeCount >= report.requiredAgreementCount) {
-      return { ...report, status: "disagreed" as const };
-    }
-    return report;
+    return {
+      ...report,
+      status: getReportStatusFromVotes(report, votes),
+      lastActivityAt: activityAt,
+    };
   });
+}
+
+function getPurchaseStatusFromVotes(purchase: Purchase, votes: Vote[]): Purchase["status"] {
+  const approveCount = votes.filter((item) => item.vote === "approve").length;
+  const rejectCount = votes.filter((item) => item.vote === "reject").length;
+  if (approveCount >= purchase.requiredApprovals) {
+    return "approved";
+  }
+  if (rejectCount >= purchase.requiredApprovals) {
+    return "rejected";
+  }
+  return "pending";
+}
+
+function getReportStatusFromVotes(report: Report, votes: ReportVote[]): Report["status"] {
+  const agreeCount = votes.filter((item) => item.vote === "agree").length;
+  const disagreeCount = votes.filter((item) => item.vote === "disagree").length;
+  if (agreeCount >= report.requiredAgreementCount) {
+    return "agreed";
+  }
+  if (disagreeCount >= report.requiredAgreementCount) {
+    return "disagreed";
+  }
+  return "open";
 }
 
 function dateValueToIso(value: unknown) {

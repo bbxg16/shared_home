@@ -38,6 +38,7 @@ export interface Purchase {
   eligibleVoterCount: number;
   requiredApprovals: number;
   createdAt: string;
+  lastActivityAt: string;
   expiresAt: string;
 }
 
@@ -62,6 +63,7 @@ export interface Report {
   eligibleVoterCount: number;
   requiredAgreementCount: number;
   createdAt: string;
+  lastActivityAt: string;
   expiresAt: string;
 }
 

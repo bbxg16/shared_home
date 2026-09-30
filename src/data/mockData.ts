@@ -34,6 +34,7 @@ export const mockPurchases: Purchase[] = [
     eligibleVoterCount: 3,
     requiredApprovals: 2,
     createdAt: "2026-09-21T09:00:00Z",
+    lastActivityAt: "2026-09-21T10:00:00Z",
     expiresAt: "2026-09-28T09:00:00Z",
   },
   {
@@ -48,6 +49,7 @@ export const mockPurchases: Purchase[] = [
     eligibleVoterCount: 3,
     requiredApprovals: 2,
     createdAt: "2026-09-20T14:30:00Z",
+    lastActivityAt: "2026-09-20T14:30:00Z",
     expiresAt: "2026-09-27T14:30:00Z",
   },
   {
@@ -62,6 +64,7 @@ export const mockPurchases: Purchase[] = [
     eligibleVoterCount: 3,
     requiredApprovals: 2,
     createdAt: "2026-09-18T11:00:00Z",
+    lastActivityAt: "2026-09-18T13:00:00Z",
     expiresAt: "2026-09-25T11:00:00Z",
   },
   {
@@ -76,6 +79,7 @@ export const mockPurchases: Purchase[] = [
     eligibleVoterCount: 3,
     requiredApprovals: 2,
     createdAt: "2026-09-16T16:15:00Z",
+    lastActivityAt: "2026-09-16T18:00:00Z",
     expiresAt: "2026-09-23T16:15:00Z",
   },
 ];
@@ -106,6 +110,7 @@ export const mockReports: Report[] = [
     eligibleVoterCount: 3,
     requiredAgreementCount: 2,
     createdAt: "2026-09-21T08:00:00Z",
+    lastActivityAt: "2026-09-21T08:00:00Z",
     expiresAt: "2026-09-28T08:00:00Z",
   },
   {
@@ -119,6 +124,7 @@ export const mockReports: Report[] = [
     eligibleVoterCount: 3,
     requiredAgreementCount: 2,
     createdAt: "2026-09-19T20:00:00Z",
+    lastActivityAt: "2026-09-19T22:00:00Z",
     expiresAt: "2026-09-26T20:00:00Z",
   },
 ];

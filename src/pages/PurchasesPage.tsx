@@ -6,14 +6,13 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAppData } from "@/state/AppDataContext";
 import { useLanguage } from "@/state/LanguageContext";
-import type { Purchase, PurchaseStatus } from "@/types";
+import type { Purchase } from "@/types";
 
-type TabKey = "pending" | "mine" | "history";
+type TabKey = "all" | "mine";
 
-const TABS: { key: TabKey; label: string; statuses?: PurchaseStatus[] }[] = [
-  { key: "pending", label: "Pending", statuses: ["pending"] },
-  { key: "mine", label: "Mine" },
-  { key: "history", label: "History", statuses: ["approved", "rejected", "expired"] },
+const TABS: { key: TabKey; labelKey: "all" | "mine" }[] = [
+  { key: "all", labelKey: "all" },
+  { key: "mine", labelKey: "mine" },
 ];
 
 export function PurchasesPage() {
@@ -28,7 +27,7 @@ export function PurchasesPage() {
     deletePurchaseRequest,
   } = useAppData();
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<TabKey>("pending");
+  const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -37,12 +36,16 @@ export function PurchasesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const visiblePurchases = useMemo(() => {
-    const tab = TABS.find((item) => item.key === activeTab)!;
+    const activeStatuses = new Set(["pending", "approved", "rejected"]);
+    const visible = purchases.filter((purchase) => activeStatuses.has(purchase.status));
     if (activeTab === "mine") {
-      return purchases.filter((purchase) => purchase.requestedBy === currentUser.userId);
+      return sortPurchases(visible.filter((purchase) => purchase.requestedBy === currentUser.userId));
     }
-    return purchases.filter((purchase) => tab.statuses?.includes(purchase.status));
+    return sortPurchases(visible);
   }, [activeTab, currentUser.userId, purchases]);
+
+  const pendingPurchases = visiblePurchases.filter((purchase) => purchase.status === "pending");
+  const resolvedPurchases = visiblePurchases.filter((purchase) => purchase.status !== "pending");
 
   async function submitRequest() {
     if (!name.trim() || !description.trim()) {
@@ -72,13 +75,13 @@ export function PurchasesPage() {
     <div>
       <AppHeader
         title={t("requests")}
-        subtitle="Purchase requests expire after 7 days"
+        subtitle={t("requestExpiry")}
         action={
           <button
             type="button"
             onClick={() => setShowForm((current) => !current)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-white"
-            aria-label="Create purchase request"
+            aria-label={t("createRequest")}
           >
             <Plus className="h-5 w-5" strokeWidth={2.25} />
           </button>
@@ -95,7 +98,7 @@ export function PurchasesPage() {
               activeTab === tab.key ? "bg-ink text-white" : "bg-white text-ink-soft"
             }`}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -111,7 +114,7 @@ export function PurchasesPage() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="What do you want to buy?"
+              placeholder={t("requestNamePlaceholder")}
               className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
             />
             <input
@@ -140,37 +143,80 @@ export function PurchasesPage() {
               onClick={() => void submitRequest()}
               className="rounded-card bg-sage-500 py-2.5 text-sm font-medium text-white disabled:opacity-60"
             >
-              {isSubmitting ? "Submitting..." : t("submitRequest")}
+              {isSubmitting ? t("submitting") : t("submitRequest")}
             </button>
           </section>
         ) : null}
 
         {visiblePurchases.length === 0 ? (
-          <EmptyState icon={Tags} title="Nothing here yet" description="Requests will show up as they move." />
+          <EmptyState icon={Tags} title={t("noRequestsTitle")} description={t("noRequestsDescription")} />
         ) : (
-          visiblePurchases.map((purchase) => (
-            <PurchaseCard
-              key={purchase.id}
-              purchase={purchase}
-              approveCount={(purchaseVotes[purchase.id] ?? []).filter((vote) => vote.vote === "approve").length}
-              canDelete={purchase.requestedBy === currentUser.userId}
-              onDelete={() => deletePurchaseRequest(purchase.id)}
-            />
-          ))
+          <>
+            {pendingPurchases.length > 0 ? (
+              <PurchaseSection
+                title={t("activeMemorials")}
+                purchases={pendingPurchases}
+                purchaseVotes={purchaseVotes}
+                currentUserId={currentUser.userId}
+                onDelete={deletePurchaseRequest}
+              />
+            ) : null}
+            {resolvedPurchases.length > 0 ? (
+              <PurchaseSection
+                title={t("resolvedMemorials")}
+                purchases={resolvedPurchases}
+                purchaseVotes={purchaseVotes}
+                currentUserId={currentUser.userId}
+                onDelete={deletePurchaseRequest}
+              />
+            ) : null}
+          </>
         )}
       </div>
     </div>
   );
 }
 
+function PurchaseSection({
+  title,
+  purchases,
+  purchaseVotes,
+  currentUserId,
+  onDelete,
+}: {
+  title: string;
+  purchases: Purchase[];
+  purchaseVotes: Record<string, { vote: "approve" | "reject"; userId: string }[]>;
+  currentUserId: string;
+  onDelete: (purchaseId: string) => Promise<void>;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <p className="px-1 text-xs font-medium uppercase tracking-wide text-ink-soft">{title}</p>
+      {purchases.map((purchase) => (
+        <PurchaseCard
+          key={purchase.id}
+          purchase={purchase}
+          approveCount={(purchaseVotes[purchase.id] ?? []).filter((vote) => vote.vote === "approve").length}
+          totalVoteCount={(purchaseVotes[purchase.id] ?? []).length}
+          canDelete={purchase.requestedBy === currentUserId}
+          onDelete={() => onDelete(purchase.id)}
+        />
+      ))}
+    </section>
+  );
+}
+
 function PurchaseCard({
   purchase,
   approveCount,
+  totalVoteCount,
   canDelete,
   onDelete,
 }: {
   purchase: Purchase;
   approveCount: number;
+  totalVoteCount: number;
   canDelete: boolean;
   onDelete: () => Promise<void>;
 }) {
@@ -184,7 +230,7 @@ function PurchaseCard({
   }
 
   return (
-    <article className="pinned-card overflow-hidden">
+    <article className={`pinned-card overflow-hidden ${purchase.status === "pending" ? "border border-honey-300 bg-honey-100/60" : ""}`}>
       <Link to={`/purchases/${purchase.id}`} className="block">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -197,9 +243,9 @@ function PurchaseCard({
       </Link>
       <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink-soft">
         <Link to={`/purchases/${purchase.id}`} className="min-w-0 flex-1">
-          <span>By {purchase.requestedByName}</span>
+          <span>{t("byUser").replace("{name}", purchase.requestedByName)}</span>
           <span className="ml-2 inline-flex items-center gap-1 font-mono text-xs">
-            {approveCount}/{purchase.requiredApprovals}
+            {approveCount}/{purchase.requiredApprovals} · {totalVoteCount}/{purchase.eligibleVoterCount}
             <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
           </span>
         </Link>
@@ -217,4 +263,15 @@ function PurchaseCard({
       </div>
     </article>
   );
+}
+
+function sortPurchases(purchases: Purchase[]) {
+  return [...purchases].sort((left, right) => {
+    const leftActive = left.status === "pending" ? 1 : 0;
+    const rightActive = right.status === "pending" ? 1 : 0;
+    if (leftActive !== rightActive) {
+      return rightActive - leftActive;
+    }
+    return new Date(right.lastActivityAt).getTime() - new Date(left.lastActivityAt).getTime();
+  });
 }
