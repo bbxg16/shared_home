@@ -187,7 +187,7 @@ function WeeklyReportChart({ summaries }: { summaries: WeeklyReportSummary[] }) 
       ) : (
         <ul className="flex flex-col gap-3">
           {sortedSummaries.map((summary) => {
-            const width = `${Math.max((summary.receivedCount / maxReceived) * 100, 8)}%`;
+            const width = summary.receivedCount === 0 ? "0%" : `${Math.max((summary.receivedCount / maxReceived) * 100, 8)}%`;
             return (
               <li key={summary.userId}>
                 <div className="mb-1 flex items-center justify-between gap-3 text-sm">
@@ -197,7 +197,7 @@ function WeeklyReportChart({ summaries }: { summaries: WeeklyReportSummary[] }) 
                   </span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-ink/[0.06]">
-                  <div className="h-full rounded-full bg-clay-400" style={{ width }} />
+                  <div className="h-full rounded-full bg-clay-500" style={{ width }} />
                 </div>
               </li>
             );
@@ -276,7 +276,11 @@ function ReportCard({
         <Link to={`/reports/${report.id}`} className="min-w-0 flex-1">
           <span>{t("clears").replace("{date}", formatDate(report.expiresAt, language))}</span>
           <span className="ml-2 inline-flex items-center gap-1 font-mono text-xs">
-            {agreeCount}/{report.requiredAgreementCount} · {totalVoteCount}/{report.eligibleVoterCount}
+            {t("cardVoteSummary")
+              .replace("{positiveLabel}", t("agreeAction"))
+              .replace("{positive}", String(agreeCount))
+              .replace("{totalVotes}", String(totalVoteCount))
+              .replace("{totalVoters}", String(report.eligibleVoterCount))}
             <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
           </span>
         </Link>

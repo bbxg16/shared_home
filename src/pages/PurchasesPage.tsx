@@ -245,7 +245,11 @@ function PurchaseCard({
         <Link to={`/purchases/${purchase.id}`} className="min-w-0 flex-1">
           <span>{t("byUser").replace("{name}", purchase.requestedByName)}</span>
           <span className="ml-2 inline-flex items-center gap-1 font-mono text-xs">
-            {approveCount}/{purchase.requiredApprovals} · {totalVoteCount}/{purchase.eligibleVoterCount}
+            {t("cardVoteSummary")
+              .replace("{positiveLabel}", t("approveAction"))
+              .replace("{positive}", String(approveCount))
+              .replace("{totalVotes}", String(totalVoteCount))
+              .replace("{totalVoters}", String(purchase.eligibleVoterCount))}
             <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
           </span>
         </Link>
