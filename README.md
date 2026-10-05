@@ -77,7 +77,7 @@ When `.env.local` is configured, the app uses live Firebase data:
 - Another signed-in user can join by entering that invite code.
 - Members, request posts, report posts, and votes are scoped under the joined home.
 - Posts store text fields directly in Firestore.
-- Post details are created with an `expiresAt` timestamp 7 days after creation.
+- Post details are created with an `expiresAt` timestamp 30 days after creation.
 - When a signed-in member opens the app, expired request/report documents are deleted in small batches.
 
 Firestore shape:
@@ -149,11 +149,11 @@ The app currently includes:
 - Reports: members can report another member with comments
 - 举报 voting: other members agree/disagree with optional comments
 - Weekly report summary showing reports each member received
-- Purchase request and report details carry a 7-day expiry timestamp
+- Purchase request and report details carry a 30-day expiry timestamp
 
 **Still simple / next backend work:**
 
-- Move 7-day cleanup from client-side best effort to a scheduled Cloud Function
+- Move 30-day cleanup from client-side best effort to a scheduled Cloud Function
 - Add stronger rule validation for vote eligibility and immutable request/report fields
 - Firebase Analytics
 - Cloud Functions

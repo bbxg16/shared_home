@@ -89,6 +89,7 @@ interface AppDataContextValue {
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
+const POST_RETENTION_DAYS = 30;
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -485,7 +486,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       lastActivityAt: serverTimestamp(),
       lastActivityBy: authUser.uid,
       lastActivityType: "created",
-      expiresAt: addDays(new Date(), 7),
+      expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
     });
   }
 
@@ -580,7 +581,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       lastActivityAt: serverTimestamp(),
       lastActivityBy: authUser.uid,
       lastActivityType: "created",
-      expiresAt: addDays(new Date(), 7),
+      expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
     });
   }
 
@@ -696,7 +697,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         lastActivityAt: createdAt.toISOString(),
         lastActivityBy: currentUser.userId,
         lastActivityType: "created",
-        expiresAt: addDays(createdAt, 7).toISOString(),
+        expiresAt: addDays(createdAt, POST_RETENTION_DAYS).toISOString(),
       },
       ...current,
     ]);
@@ -746,7 +747,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         lastActivityAt: createdAt.toISOString(),
         lastActivityBy: currentUser.userId,
         lastActivityType: "created",
-        expiresAt: addDays(createdAt, 7).toISOString(),
+        expiresAt: addDays(createdAt, POST_RETENTION_DAYS).toISOString(),
       },
       ...current,
     ]);
