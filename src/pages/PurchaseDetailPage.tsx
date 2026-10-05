@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, ExternalLink, Tags, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink, Tags, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAppData } from "@/state/AppDataContext";
@@ -13,6 +13,7 @@ export function PurchaseDetailPage() {
   const { language, t } = useLanguage();
   const { currentUser, purchases, purchaseVotes, voteOnPurchase, deletePurchaseRequest } = useAppData();
   const [comment, setComment] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
   const purchase = purchases.find((item) => item.id === id);
   const votes = purchaseVotes[purchase?.id ?? ""] ?? [];
   const currentVote = votes.find((vote) => vote.userId === currentUser.userId);
@@ -43,6 +44,7 @@ export function PurchaseDetailPage() {
   const isRequester = purchase.requestedBy === currentUser.userId;
   const canVote = !isRequester && purchase.status !== "expired";
   const purchaseId = purchase.id;
+  const productUrl = purchase.productUrl;
 
   function submitVote(vote: VoteType) {
     if (!canVote) {
@@ -57,6 +59,16 @@ export function PurchaseDetailPage() {
     }
     await deletePurchaseRequest(purchaseId);
     navigate("/purchases");
+  }
+
+  async function copyProductLink() {
+    if (!productUrl) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(productUrl);
+    setCopyMessage(t("copiedProductLink"));
+    window.setTimeout(() => setCopyMessage(""), 1800);
   }
 
   return (
@@ -107,16 +119,33 @@ export function PurchaseDetailPage() {
               <dt className="text-ink-soft">{t("clearsAfter")}</dt>
               <dd className="font-mono text-xs text-ink">{formatDate(purchase.expiresAt, language)}</dd>
             </div>
-            {purchase.productUrl ? (
-              <a
-                href={purchase.productUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 flex items-center justify-between text-harbor-500"
-              >
-                {t("viewProductLink")}
-                <ExternalLink className="h-4 w-4" strokeWidth={1.75} />
-              </a>
+            {productUrl ? (
+              <div className="mt-1 rounded-card bg-ink/[0.04] p-3">
+                <dt className="text-ink-soft">{t("productLink")}</dt>
+                <dd className="mt-1 select-text break-all font-mono text-xs leading-relaxed text-ink">
+                  {productUrl}
+                </dd>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void copyProductLink()}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-card bg-ink py-2 text-sm font-medium text-white"
+                  >
+                    <Copy className="h-4 w-4" strokeWidth={1.75} />
+                    {t("copyProductLink")}
+                  </button>
+                  <a
+                    href={productUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-card border border-harbor-500/30 bg-white py-2 text-sm font-medium text-harbor-500"
+                  >
+                    <ExternalLink className="h-4 w-4" strokeWidth={1.75} />
+                    {t("openProductLink")}
+                  </a>
+                </div>
+                {copyMessage ? <p className="mt-2 text-center text-xs text-sage-700">{copyMessage}</p> : null}
+              </div>
             ) : null}
           </dl>
         </section>
