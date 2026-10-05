@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Copy, ExternalLink, Tags, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, Tags, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAppData } from "@/state/AppDataContext";
@@ -41,6 +41,7 @@ export function PurchaseDetailPage() {
   const approveCount = votes.filter((vote) => vote.vote === "approve").length;
   const rejectCount = votes.filter((vote) => vote.vote === "reject").length;
   const totalVoteCount = votes.length;
+  const pendingVoteCount = Math.max(purchase.eligibleVoterCount - totalVoteCount, 0);
   const isRequester = purchase.requestedBy === currentUser.userId;
   const canVote = !isRequester && purchase.status !== "expired";
   const purchaseId = purchase.id;
@@ -134,15 +135,6 @@ export function PurchaseDetailPage() {
                     <Copy className="h-4 w-4" strokeWidth={1.75} />
                     {t("copyProductLink")}
                   </button>
-                  <a
-                    href={productUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex flex-1 items-center justify-center gap-2 rounded-card border border-harbor-500/30 bg-white py-2 text-sm font-medium text-harbor-500"
-                  >
-                    <ExternalLink className="h-4 w-4" strokeWidth={1.75} />
-                    {t("openProductLink")}
-                  </a>
                 </div>
                 {copyMessage ? <p className="mt-2 text-center text-xs text-sage-700">{copyMessage}</p> : null}
               </div>
@@ -161,6 +153,17 @@ export function PurchaseDetailPage() {
               .replace("{totalVotes}", String(totalVoteCount))
               .replace("{totalVoters}", String(purchase.eligibleVoterCount))}
           </p>
+          <VoteProgressBar
+            approveCount={approveCount}
+            rejectCount={rejectCount}
+            pendingCount={pendingVoteCount}
+            totalCount={purchase.eligibleVoterCount}
+          />
+          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+            <VoteStat colorClassName="bg-sage-500" label={t("approveAction")} value={approveCount} />
+            <VoteStat colorClassName="bg-clay-500" label={t("rejectAction")} value={rejectCount} />
+            <VoteStat colorClassName="bg-ink/20" label={t("pendingReview")} value={pendingVoteCount} />
+          </div>
 
           {votes.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-2">
@@ -230,6 +233,49 @@ export function PurchaseDetailPage() {
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function VoteProgressBar({
+  approveCount,
+  rejectCount,
+  pendingCount,
+  totalCount,
+}: {
+  approveCount: number;
+  rejectCount: number;
+  pendingCount: number;
+  totalCount: number;
+}) {
+  const safeTotal = Math.max(totalCount, 1);
+  const segments = [
+    { key: "approve", count: approveCount, className: "bg-sage-500" },
+    { key: "reject", count: rejectCount, className: "bg-clay-500" },
+    { key: "pending", count: pendingCount, className: "bg-ink/15" },
+  ];
+
+  return (
+    <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-ink/10">
+      {segments.map((segment) =>
+        segment.count > 0 ? (
+          <span
+            key={segment.key}
+            className={segment.className}
+            style={{ width: `${(segment.count / safeTotal) * 100}%` }}
+          />
+        ) : null
+      )}
+    </div>
+  );
+}
+
+function VoteStat({ colorClassName, label, value }: { colorClassName: string; label: string; value: number }) {
+  return (
+    <div className="rounded-card bg-ink/[0.04] px-2 py-2">
+      <span className={`mb-1 block h-1.5 w-6 rounded-full ${colorClassName}`} />
+      <span className="block text-ink-soft">{label}</span>
+      <span className="font-mono text-sm font-semibold text-ink">{value}</span>
     </div>
   );
 }

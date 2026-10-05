@@ -498,7 +498,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     await setDoc(purchaseRef, {
       name: request.name,
-      productUrl: normalizeExternalUrl(request.productUrl) ?? null,
+      productUrl: request.productUrl?.trim() || null,
       price: request.price ?? null,
       description: request.description,
       requestedBy: authUser.uid,
@@ -728,7 +728,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       {
         id: `p-${crypto.randomUUID()}`,
         ...request,
-        productUrl: normalizeExternalUrl(request.productUrl),
+        productUrl: request.productUrl?.trim() || undefined,
         requestedBy: currentUser.userId,
         requestedByName: currentUser.displayName,
         status: "pending",
@@ -970,7 +970,7 @@ function parsePurchase(snapshot: QueryDocumentSnapshot<DocumentData>): Purchase 
   return {
     id: snapshot.id,
     name: String(data.name ?? "Untitled request"),
-    productUrl: normalizeExternalUrl(data.productUrl ? String(data.productUrl) : undefined),
+    productUrl: data.productUrl ? String(data.productUrl) : undefined,
     price: data.price === null || data.price === undefined ? undefined : String(data.price),
     description: String(data.description ?? ""),
     requestedBy: String(data.requestedBy ?? ""),
@@ -1135,21 +1135,6 @@ function addDays(date: Date, days: number) {
   const nextDate = new Date(date);
   nextDate.setDate(nextDate.getDate() + days);
   return nextDate;
-}
-
-function normalizeExternalUrl(value?: string) {
-  const trimmedValue = value?.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const withProtocol = /^[a-z][a-z\d+\-.]*:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
-  try {
-    const url = new URL(withProtocol);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function generateInviteCode() {
