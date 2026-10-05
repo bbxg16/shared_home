@@ -127,6 +127,7 @@ export function PurchasesPage() {
             <input
               value={productUrl}
               onChange={(event) => setProductUrl(event.target.value)}
+              inputMode="url"
               placeholder={t("productLinkOptional")}
               className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
             />
