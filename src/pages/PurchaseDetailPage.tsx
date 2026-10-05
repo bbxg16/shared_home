@@ -136,16 +136,20 @@ export function PurchaseDetailPage() {
           {votes.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-2">
               {votes.map((vote) => (
-                <li key={vote.userId} className="text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-ink">
+                <li key={vote.userId} className="rounded-card bg-ink/[0.04] px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate font-medium text-ink">
                       {vote.userId === currentUser.userId ? t("currentUser") : vote.userName}
                     </span>
-                    <span className={`font-mono text-xs uppercase ${vote.vote === "approve" ? "text-sage-700" : "text-clay-700"}`}>
+                    <span
+                      className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        vote.vote === "approve" ? "bg-sage-100 text-sage-700" : "bg-clay-100 text-clay-700"
+                      }`}
+                    >
                       {vote.vote === "approve" ? t("approveAction") : t("rejectAction")}
                     </span>
                   </div>
-                  {vote.comment ? <p className="mt-0.5 text-ink-soft">{vote.comment}</p> : null}
+                  {vote.comment ? <p className="mt-2 whitespace-pre-wrap leading-relaxed text-ink-soft">{vote.comment}</p> : null}
                 </li>
               ))}
             </ul>
