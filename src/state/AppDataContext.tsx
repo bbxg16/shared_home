@@ -90,6 +90,7 @@ interface AppDataContextValue {
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 const POST_RETENTION_DAYS = 30;
+const EMAIL_NOTIFICATION_COLLECTION = "emailNotifications";
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -109,6 +110,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     ? {
         userId: authUser.uid,
         displayName: getUserDisplayName(authUser, profileDisplayName),
+        email: authUser.email ?? undefined,
         photoURL: authUser.photoURL ?? undefined,
         role: members.find((member) => member.userId === authUser.uid)?.role ?? "member",
       }
@@ -284,6 +286,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [authUser, currentHouse?.id]);
 
   useEffect(() => {
+    if (!db || !authUser || !currentHouse?.id || !authUser.email) {
+      return;
+    }
+
+    const member = members.find((item) => item.userId === authUser.uid);
+    if (member?.email === authUser.email) {
+      return;
+    }
+
+    void setDoc(
+      doc(db, "houses", currentHouse.id, "members", authUser.uid),
+      {
+        email: authUser.email,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }, [authUser, currentHouse?.id, members]);
+
+  useEffect(() => {
     if (!db || !currentHouse?.id || purchases.length === 0) {
       setPurchaseVotes({});
       return () => undefined;
@@ -342,6 +364,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const member: HouseMember = {
       userId: authUser.uid,
       displayName: getUserDisplayName(authUser, profileDisplayName),
+      email: authUser.email ?? undefined,
       photoURL: authUser.photoURL ?? undefined,
       role: "owner",
     };
@@ -387,6 +410,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const member: HouseMember = {
       userId: authUser.uid,
       displayName: getUserDisplayName(authUser, profileDisplayName),
+      email: authUser.email ?? undefined,
       photoURL: authUser.photoURL ?? undefined,
       role: "member",
     };
@@ -488,6 +512,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       lastActivityType: "created",
       expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
     });
+    await queueEmailNotification({
+      kind: "purchase",
+      postId: purchaseRef.id,
+      title: request.name,
+      body: request.description,
+      createdByName: getUserDisplayName(authUser, profileDisplayName),
+      path: `/purchases/${purchaseRef.id}`,
+    });
   }
 
   async function deletePurchaseRequest(purchaseId: string) {
@@ -582,6 +614,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       lastActivityBy: authUser.uid,
       lastActivityType: "created",
       expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
+    });
+    await queueEmailNotification({
+      kind: "report",
+      postId: reportRef.id,
+      title: targetMember.displayName,
+      body: report.comments,
+      createdByName: getUserDisplayName(authUser, profileDisplayName),
+      path: `/reports/${reportRef.id}`,
     });
   }
 
@@ -800,6 +840,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         {
           userId: authUser.uid,
           displayName: trimmedName,
+          email: authUser.email ?? null,
           photoURL: authUser.photoURL ?? null,
           role: members.find((member) => member.userId === authUser.uid)?.role ?? "member",
           updatedAt: serverTimestamp(),
@@ -809,6 +850,54 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     setProfileDisplayName(trimmedName);
+  }
+
+  async function queueEmailNotification({
+    kind,
+    postId,
+    title,
+    body,
+    createdByName,
+    path,
+  }: {
+    kind: "purchase" | "report";
+    postId: string;
+    title: string;
+    body: string;
+    createdByName: string;
+    path: string;
+  }) {
+    if (!db || !authUser || !currentHouse) {
+      return;
+    }
+
+    const recipients = members
+      .filter((member) => member.userId !== authUser.uid && member.email)
+      .map((member) => ({
+        userId: member.userId,
+        name: member.displayName,
+        email: member.email,
+      }));
+
+    if (recipients.length === 0) {
+      return;
+    }
+
+    const notificationRef = doc(collection(db, EMAIL_NOTIFICATION_COLLECTION));
+    await setDoc(notificationRef, {
+      houseId: currentHouse.id,
+      houseName: currentHouse.name,
+      kind,
+      postId,
+      title,
+      body,
+      createdBy: authUser.uid,
+      createdByName,
+      recipients,
+      url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}${path}`,
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
   }
 
   return (
@@ -869,6 +958,7 @@ function parseMember(snapshot: QueryDocumentSnapshot<DocumentData>): HouseMember
   return {
     userId: String(data.userId ?? snapshot.id),
     displayName: String(data.displayName ?? "Member"),
+    email: data.email ? String(data.email) : undefined,
     photoURL: data.photoURL ? String(data.photoURL) : undefined,
     role: data.role === "owner" ? "owner" : "member",
   };

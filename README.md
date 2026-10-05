@@ -90,6 +90,7 @@ Firestore shape:
 /houses/{houseId}/purchases/{purchaseId}/votes/{uid}
 /houses/{houseId}/reports/{reportId}
 /houses/{houseId}/reports/{reportId}/votes/{uid}
+/emailNotifications/{notificationId}
 ```
 
 After enabling Firestore, deploy the included rules:
@@ -160,6 +161,43 @@ The app currently includes:
 - Push/email notifications
 - Expense tracking, payments, or an expiry scheduler
 - Native iOS/Android apps
+
+## Optional Free Email Notifications
+
+The app can queue email notifications in Firestore when a member creates a new request or report. This does not send mail by itself. A free Google Apps Script timer can poll the queue and send emails from your Gmail account.
+
+How it works:
+
+- New request/report created in the app.
+- App writes `/emailNotifications/{notificationId}` with the post link and recipient emails.
+- Google Apps Script runs every few minutes.
+- Script sends one email to the other members and marks the notification `sent`.
+
+Setup:
+
+1. Deploy the updated Firestore rules:
+
+```bash
+firebase deploy --project shared-home-48f90 --only firestore:rules
+```
+
+2. In Google Cloud Console for the Firebase project, create a service account and grant it **Cloud Datastore User**.
+3. Create a JSON key for that service account.
+4. Open <https://script.google.com>, create a new Apps Script project, and paste `tools/google-apps-script-email-notifications.js`.
+5. In Apps Script, open **Project Settings → Script properties** and add:
+
+```text
+FIREBASE_PROJECT_ID=shared-home-48f90
+SERVICE_ACCOUNT_EMAIL=the service account client_email
+SERVICE_ACCOUNT_PRIVATE_KEY=the service account private_key
+```
+
+Keep the `\n` characters in the private key if you paste it on one line.
+
+6. Run `processEmailNotifications` once and approve permissions.
+7. Add a time-driven trigger for `processEmailNotifications`, such as every 5 minutes.
+
+Existing members may need to open the app once after this update so their email is saved into the home member list. New members will save their email automatically when they create or join a home.
 
 ## Backend next up
 

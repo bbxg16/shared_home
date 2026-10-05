@@ -18,6 +18,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /emailNotifications/{notificationId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if false;
+    }
+
     // Prototype rule set: any signed-in user can create/join/read/write home data.
     // Tighten this before sharing publicly.
     match /houses/{houseId} {

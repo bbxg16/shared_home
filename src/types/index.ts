@@ -22,6 +22,7 @@ export interface House {
 export interface HouseMember {
   userId: string;
   displayName: string;
+  email?: string;
   photoURL?: string;
   role: "owner" | "member";
 }
