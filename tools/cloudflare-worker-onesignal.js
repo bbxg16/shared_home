@@ -28,6 +28,7 @@ export default {
     const kind = payload.kind === "report" ? "report" : "purchase";
     const title = asText(payload.title, 80);
     const body = asText(payload.body, 140);
+    const createdById = asText(payload.createdById, 120);
     const createdByName = asText(payload.createdByName, 80);
     const url = asText(payload.url, 500);
     const recipientUserIds = Array.isArray(payload.recipientUserIds)
@@ -39,7 +40,7 @@ export default {
     }
 
     const heading = "有新的折子请审阅！";
-    const content = `您的同僚“${createdByName || "有人"}”提交新折子了，快去看看吧`;
+    const content = `您的同僚“${createdById || createdByName || "有人"}”提交新折子了，快去看看吧`;
     const response = await fetch(ONESIGNAL_API_URL, {
       method: "POST",
       headers: {
