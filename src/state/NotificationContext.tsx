@@ -3,6 +3,7 @@ import { useAppData } from "@/state/AppDataContext";
 import { useLanguage } from "@/state/LanguageContext";
 
 type NotificationPermissionState = NotificationPermission | "unsupported";
+type NotificationStatus = "idle" | "working" | "ready" | "blocked" | "error";
 
 interface OneSignalSdk {
   init: (options: {
@@ -39,6 +40,7 @@ interface NotificationContextValue {
   isAvailable: boolean;
   isEnabled: boolean;
   permission: NotificationPermissionState;
+  status: NotificationStatus;
   toggleNotifications: () => Promise<void>;
 }
 
@@ -52,6 +54,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [permission, setPermission] = useState<NotificationPermissionState>(() => getNotificationPermission());
   const [localNotificationsEnabled, setLocalNotificationsEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "true");
   const [oneSignalEnabled, setOneSignalEnabled] = useState(false);
+  const [status, setStatus] = useState<NotificationStatus>("idle");
   const lastNotifiedEventId = useRef<string | null>(null);
   const oneSignalPromise = useRef<Promise<OneSignalSdk | null> | null>(null);
   const oneSignalUserId = useRef<string | null>(null);
@@ -84,8 +87,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       await oneSignal.User.addTag("house_name", currentHouse.name);
       setOneSignalEnabled(oneSignal.User.PushSubscription.optedIn);
       setPermission(oneSignal.Notifications.permissionNative);
+      setStatus(oneSignal.User.PushSubscription.optedIn ? "ready" : "idle");
     }).catch((error) => {
       console.warn("OneSignal setup failed", error);
+      setStatus("error");
     });
   }, [authUser, currentHouse, isOneSignalConfigured]);
 
@@ -111,32 +116,43 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       isAvailable,
       isEnabled: isAvailable && (isOneSignalConfigured ? oneSignalEnabled : localNotificationsEnabled && permission === "granted"),
       permission,
+      status,
       toggleNotifications: async () => {
         if (isOneSignalConfigured) {
           if (permission === "unsupported") {
+            setStatus("error");
             return;
           }
 
-          if (!oneSignalEnabled) {
-            const nextPermission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-            setPermission(nextPermission);
-            if (nextPermission !== "granted") {
+          try {
+            setStatus("working");
+            const oneSignal = await getOneSignal(oneSignalPromise);
+            if (!oneSignal || !oneSignal.Notifications.isPushSupported()) {
+              setStatus("error");
               return;
             }
-          }
 
-          const oneSignal = await getOneSignal(oneSignalPromise);
-          if (!oneSignal || !oneSignal.Notifications.isPushSupported()) {
-            return;
+            if (oneSignalEnabled || oneSignal.User.PushSubscription.optedIn) {
+              await oneSignal.User.PushSubscription.optOut();
+              setOneSignalEnabled(false);
+              setStatus("idle");
+            } else {
+              const allowed = oneSignal.Notifications.permission || await oneSignal.Notifications.requestPermission();
+              const nextPermission = oneSignal.Notifications.permissionNative || Notification.permission;
+              setPermission(nextPermission);
+              if (!allowed || nextPermission !== "granted") {
+                setStatus("blocked");
+                return;
+              }
+              await oneSignal.User.PushSubscription.optIn();
+              setOneSignalEnabled(oneSignal.User.PushSubscription.optedIn);
+              setStatus(oneSignal.User.PushSubscription.optedIn ? "ready" : "error");
+            }
+            setPermission(oneSignal.Notifications.permissionNative);
+          } catch (error) {
+            console.warn("OneSignal subscription failed", error);
+            setStatus("error");
           }
-
-          if (oneSignalEnabled || oneSignal.User.PushSubscription.optedIn) {
-            await oneSignal.User.PushSubscription.optOut();
-          } else {
-            await oneSignal.User.PushSubscription.optIn();
-          }
-          setOneSignalEnabled(oneSignal.User.PushSubscription.optedIn);
-          setPermission(oneSignal.Notifications.permissionNative);
           return;
         }
 
@@ -158,9 +174,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
         localStorage.setItem(STORAGE_KEY, String(nextEnabled));
         setLocalNotificationsEnabled(nextEnabled);
+        setStatus(nextEnabled ? "ready" : "blocked");
       },
     }),
-    [activityEvents, isAvailable, isOneSignalConfigured, localNotificationsEnabled, oneSignalEnabled, permission]
+    [activityEvents, isAvailable, isOneSignalConfigured, localNotificationsEnabled, oneSignalEnabled, permission, status]
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;

@@ -151,6 +151,8 @@ const TEXT = {
     enableNotifications: "Enable notifications",
     notificationsOn: "Notifications on",
     notificationsBlocked: "Notifications blocked in browser settings",
+    notificationsWorking: "Setting up",
+    notificationsSetupFailed: "Notification setup failed",
   },
   zh: {
     appName: "有本要奏",
@@ -300,6 +302,8 @@ const TEXT = {
     enableNotifications: "开启通知",
     notificationsOn: "通知已开启",
     notificationsBlocked: "通知已被浏览器阻止",
+    notificationsWorking: "设置中",
+    notificationsSetupFailed: "通知连接失败",
   },
 } as const;
 
