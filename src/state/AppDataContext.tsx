@@ -520,7 +520,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       postId: purchaseRef.id,
       title: request.name,
       body: request.description,
-      createdById: authUser.uid,
       createdByName: getUserDisplayName(authUser, profileDisplayName),
       path: `/purchases/${purchaseRef.id}`,
     });
@@ -632,7 +631,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       postId: reportRef.id,
       title: targetMember.displayName,
       body: report.comments,
-      createdById: authUser.uid,
       createdByName: getUserDisplayName(authUser, profileDisplayName),
       path: `/reports/${reportRef.id}`,
     });
@@ -880,7 +878,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     postId,
     title,
     body,
-    createdById,
     createdByName,
     path,
   }: {
@@ -888,7 +885,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     postId: string;
     title: string;
     body: string;
-    createdById: string;
     createdByName: string;
     path: string;
   }) {
@@ -963,7 +959,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           postId,
           title,
           body,
-          createdById,
           createdByName,
           recipientUserIds,
           url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}${path}`,
