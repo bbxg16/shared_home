@@ -140,6 +140,13 @@ export function PurchaseDetailPage() {
               </div>
             ) : null}
           </dl>
+          {purchase.imageDataUrl ? (
+            <img
+              src={purchase.imageDataUrl}
+              alt={purchase.name}
+              className="mt-3 max-h-[420px] w-full rounded-card object-cover"
+            />
+          ) : null}
         </section>
 
         <section className="pinned-card">

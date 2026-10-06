@@ -51,6 +51,7 @@ import type {
 interface NewPurchaseRequest {
   name: string;
   productUrl?: string;
+  imageDataUrl?: string;
   price?: string;
   description: string;
 }
@@ -499,6 +500,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await setDoc(purchaseRef, {
       name: request.name,
       productUrl: request.productUrl?.trim() || null,
+      imageDataUrl: request.imageDataUrl ?? null,
       price: request.price ?? null,
       description: request.description,
       requestedBy: authUser.uid,
@@ -729,6 +731,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         id: `p-${crypto.randomUUID()}`,
         ...request,
         productUrl: request.productUrl?.trim() || undefined,
+        imageDataUrl: request.imageDataUrl,
         requestedBy: currentUser.userId,
         requestedByName: currentUser.displayName,
         status: "pending",
@@ -971,6 +974,7 @@ function parsePurchase(snapshot: QueryDocumentSnapshot<DocumentData>): Purchase 
     id: snapshot.id,
     name: String(data.name ?? "Untitled request"),
     productUrl: data.productUrl ? String(data.productUrl) : undefined,
+    imageDataUrl: data.imageDataUrl ? String(data.imageDataUrl) : undefined,
     price: data.price === null || data.price === undefined ? undefined : String(data.price),
     description: String(data.description ?? ""),
     requestedBy: String(data.requestedBy ?? ""),

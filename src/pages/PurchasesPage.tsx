@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Plus, Tags, Trash2 } from "lucide-react";
+import { ChevronRight, Image as ImageIcon, Plus, Tags, Trash2, X } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -14,6 +14,8 @@ const TABS: { key: TabKey; labelKey: "all" | "mine" }[] = [
   { key: "all", labelKey: "all" },
   { key: "mine", labelKey: "mine" },
 ];
+
+const MAX_IMAGE_DATA_URL_LENGTH = 750_000;
 
 export function PurchasesPage() {
   const {
@@ -32,6 +34,9 @@ export function PurchasesPage() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [productUrl, setProductUrl] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState<string | undefined>();
+  const [imageError, setImageError] = useState("");
+  const [imageInputVersion, setImageInputVersion] = useState(0);
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,18 +62,46 @@ export function PurchasesPage() {
       await createPurchaseRequest({
         name: name.trim(),
         productUrl: productUrl.trim() || undefined,
+        imageDataUrl,
         price: price.trim() || undefined,
         description: description.trim(),
       });
       setName("");
       setPrice("");
       setProductUrl("");
+      setImageDataUrl(undefined);
+      setImageError("");
+      setImageInputVersion((current) => current + 1);
       setDescription("");
       setShowForm(false);
       setActiveTab("mine");
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleImageChange(file?: File) {
+    setImageError("");
+    if (!file) {
+      return;
+    }
+
+    try {
+      const nextImageDataUrl = await compressImage(file);
+      if (nextImageDataUrl.length > MAX_IMAGE_DATA_URL_LENGTH) {
+        setImageError(t("imageTooLarge"));
+        return;
+      }
+      setImageDataUrl(nextImageDataUrl);
+    } catch {
+      setImageError(t("imageReadFailed"));
+    }
+  }
+
+  function removeImage() {
+    setImageDataUrl(undefined);
+    setImageError("");
+    setImageInputVersion((current) => current + 1);
   }
 
   return (
@@ -131,6 +164,33 @@ export function PurchasesPage() {
               placeholder={t("productLinkOptional")}
               className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
             />
+            <div className="rounded-card border border-ink/10 p-3">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-card bg-ink/[0.05] py-2 text-sm font-medium text-ink-soft">
+                <ImageIcon className="h-4 w-4" strokeWidth={1.75} />
+                {t("imageOptional")}
+                <input
+                  key={imageInputVersion}
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => void handleImageChange(event.target.files?.[0])}
+                  className="sr-only"
+                />
+              </label>
+              {imageDataUrl ? (
+                <div className="mt-3">
+                  <img src={imageDataUrl} alt="" className="max-h-56 w-full rounded-card object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-card border border-clay-500/40 py-2 text-sm font-medium text-clay-700"
+                  >
+                    <X className="h-4 w-4" strokeWidth={1.75} />
+                    {t("removeImage")}
+                  </button>
+                </div>
+              ) : null}
+              {imageError ? <p className="mt-2 text-sm text-clay-700">{imageError}</p> : null}
+            </div>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -176,6 +236,37 @@ export function PurchasesPage() {
       </div>
     </div>
   );
+}
+
+async function compressImage(file: File) {
+  const image = await readImage(file);
+  const maxSize = 900;
+  const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
+  const width = Math.max(Math.round(image.width * scale), 1);
+  const height = Math.max(Math.round(image.height * scale), 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas is unavailable.");
+  }
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", 0.72);
+}
+
+function readImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = String(reader.result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function PurchaseSection({

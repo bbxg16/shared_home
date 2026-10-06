@@ -31,6 +31,7 @@ export interface Purchase {
   id: string;
   name: string;
   productUrl?: string;
+  imageDataUrl?: string;
   price?: string;
   description: string;
   requestedBy: string;
