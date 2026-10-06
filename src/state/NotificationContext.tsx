@@ -8,9 +8,12 @@ type NotificationStatus = "idle" | "working" | "ready" | "blocked" | "error";
 interface OneSignalSdk {
   init: (options: {
     appId: string;
+    safari_web_id?: string;
     allowLocalhostAsSecureOrigin?: boolean;
     serviceWorkerParam?: { scope: string };
     serviceWorkerPath?: string;
+    serviceWorkerUpdaterPath?: string;
+    notifyButton?: { enable: boolean };
   }) => Promise<void>;
   login: (externalId: string) => Promise<void>;
   logout?: () => Promise<void>;
@@ -47,6 +50,7 @@ interface NotificationContextValue {
 
 const STORAGE_KEY = "shared-home-notifications-enabled";
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined;
+const ONESIGNAL_SAFARI_WEB_ID = "web.onesignal.auto.37a4bd23-e633-4ae3-9e22-29e91fb790d4";
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
@@ -232,11 +236,16 @@ function getOneSignal(oneSignalPromise: MutableRefObject<Promise<OneSignalSdk | 
     oneSignalPromise.current = loadOneSignalSdk().then((oneSignal) => {
       return oneSignal.init({
         appId: ONESIGNAL_APP_ID,
+        safari_web_id: ONESIGNAL_SAFARI_WEB_ID,
         allowLocalhostAsSecureOrigin: window.location.hostname === "localhost",
+        notifyButton: {
+          enable: true,
+        },
         serviceWorkerParam: {
           scope: import.meta.env.BASE_URL,
         },
         serviceWorkerPath: `${import.meta.env.BASE_URL}OneSignalSDKWorker.js`,
+        serviceWorkerUpdaterPath: `${import.meta.env.BASE_URL}OneSignalSDKUpdaterWorker.js`,
       }).then(() => oneSignal);
     });
   }
