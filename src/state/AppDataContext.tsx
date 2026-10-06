@@ -92,6 +92,7 @@ interface AppDataContextValue {
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 const POST_RETENTION_DAYS = 30;
 const EMAIL_NOTIFICATION_COLLECTION = "emailNotifications";
+const PUSH_WEBHOOK_URL = import.meta.env.VITE_PUSH_WEBHOOK_URL as string | undefined;
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -522,6 +523,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createdByName: getUserDisplayName(authUser, profileDisplayName),
       path: `/purchases/${purchaseRef.id}`,
     });
+    await sendPushNotification({
+      kind: "purchase",
+      postId: purchaseRef.id,
+      title: request.name,
+      body: request.description,
+      createdByName: getUserDisplayName(authUser, profileDisplayName),
+      path: `/purchases/${purchaseRef.id}`,
+    });
   }
 
   async function deletePurchaseRequest(purchaseId: string) {
@@ -618,6 +627,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
     });
     await queueEmailNotification({
+      kind: "report",
+      postId: reportRef.id,
+      title: targetMember.displayName,
+      body: report.comments,
+      createdByName: getUserDisplayName(authUser, profileDisplayName),
+      path: `/reports/${reportRef.id}`,
+    });
+    await sendPushNotification({
       kind: "report",
       postId: reportRef.id,
       title: targetMember.displayName,
@@ -902,6 +919,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       status: "pending",
       createdAt: serverTimestamp(),
     });
+  }
+
+  async function sendPushNotification({
+    kind,
+    postId,
+    title,
+    body,
+    createdByName,
+    path,
+  }: {
+    kind: "purchase" | "report";
+    postId: string;
+    title: string;
+    body: string;
+    createdByName: string;
+    path: string;
+  }) {
+    if (!PUSH_WEBHOOK_URL || !currentHouse) {
+      return;
+    }
+
+    try {
+      await fetch(PUSH_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          houseId: currentHouse.id,
+          houseName: currentHouse.name,
+          kind,
+          postId,
+          title,
+          body,
+          createdByName,
+          url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}${path}`,
+        }),
+      });
+    } catch (error) {
+      console.warn("Push notification webhook failed", error);
+    }
   }
 
   return (

@@ -39,6 +39,7 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: "431573753629"
           VITE_FIREBASE_APP_ID: 1:431573753629:web:ffbab4e7501803c6b6cbf4
           VITE_ONESIGNAL_APP_ID: 5638288d-75df-46e6-8224-f21f5a904007
+          VITE_PUSH_WEBHOOK_URL: ${{ secrets.VITE_PUSH_WEBHOOK_URL }}
 
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html

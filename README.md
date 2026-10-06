@@ -163,7 +163,7 @@ The app currently includes:
 - Add stronger rule validation for vote eligibility and immutable request/report fields
 - Firebase Analytics
 - Cloud Functions
-- Push/email notifications
+- Automatic push notifications for new requests/reports
 - Expense tracking, payments, or an expiry scheduler
 - Native iOS/Android apps
 
@@ -203,6 +203,41 @@ Keep the `\n` characters in the private key if you paste it on one line.
 7. Add a time-driven trigger for `processEmailNotifications`, such as every 5 minutes.
 
 Existing members may need to open the app once after this update so their email is saved into the home member list. New members will save their email automatically when they create or join a home.
+
+## Optional OneSignal Push Notifications
+
+The app can notify everyone in the same home when someone creates a new request or report. The browser app calls a small Cloudflare Worker, and the Worker calls OneSignal with the private REST API key.
+
+Why a Worker is needed:
+
+- The OneSignal App ID is public and can be used in the browser.
+- The OneSignal REST API Key is private and must never be committed or exposed in frontend code.
+
+Setup:
+
+1. In Cloudflare, create a Worker and paste `tools/cloudflare-worker-onesignal.js`.
+2. Add Worker environment variables:
+
+```text
+ONESIGNAL_APP_ID=5638288d-75df-46e6-8224-f21f5a904007
+ONESIGNAL_REST_API_KEY=your OneSignal REST API key
+```
+
+3. Deploy the Worker and copy its URL, for example:
+
+```text
+https://youben-push.your-name.workers.dev
+```
+
+4. In GitHub, open the repository settings and add a repository secret:
+
+```text
+Name: VITE_PUSH_WEBHOOK_URL
+Value: your Cloudflare Worker URL
+```
+
+5. Re-run the GitHub Pages deployment.
+6. Open the app once with each browser/device and turn notifications on. The app tags each OneSignal subscription with the current `house_id`, so notifications only go to members in the same home.
 
 ## Backend next up
 
