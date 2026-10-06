@@ -66,7 +66,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const oneSignalUserId = useRef<string | null>(null);
 
   const isOneSignalConfigured = Boolean(ONESIGNAL_APP_ID);
-  const isAvailable = isFirebaseMode && Boolean(currentHouse) && permission !== "unsupported";
+  const isAvailable = isFirebaseMode && Boolean(currentHouse);
 
   useEffect(() => {
     lastNotifiedEventId.current = activityEvents.at(-1)?.id ?? null;
@@ -131,7 +131,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (isOneSignalConfigured) {
           if (permission === "unsupported") {
             setStatus("error");
-            setStatusDetail("This browser does not support web push.");
+            setStatusDetail(getUnsupportedPushMessage());
             return;
           }
 
@@ -215,6 +215,21 @@ function getNotificationPermission(): NotificationPermissionState {
     return "unsupported";
   }
   return Notification.permission;
+}
+
+function getUnsupportedPushMessage() {
+  if (isIosBrowser() && !isStandaloneWebApp()) {
+    return "On iPhone, add this site to Home Screen first.";
+  }
+  return "This browser does not support web push.";
+}
+
+function isIosBrowser() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneWebApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
 }
 
 function getErrorMessage(error: unknown) {
