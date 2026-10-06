@@ -38,8 +38,8 @@ export default {
       return corsResponse({ error: "Missing required data" }, 400);
     }
 
-    const heading = kind === "report" ? "有新告发" : "有新上奏";
-    const content = `${createdByName || "有人"}提交了：${title}${body ? ` - ${body}` : ""}`;
+    const heading = "有新的折子请审阅！";
+    const content = `您的同僚“${createdByName || "有人"}”提交新折子了，快去看看吧`;
     const response = await fetch(ONESIGNAL_API_URL, {
       method: "POST",
       headers: {
