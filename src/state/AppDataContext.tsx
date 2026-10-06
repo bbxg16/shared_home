@@ -515,7 +515,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       lastActivityType: "created",
       expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
     });
-    await queueEmailNotification({
+    await sendPushNotification({
       kind: "purchase",
       postId: purchaseRef.id,
       title: request.name,
@@ -523,7 +523,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createdByName: getUserDisplayName(authUser, profileDisplayName),
       path: `/purchases/${purchaseRef.id}`,
     });
-    await sendPushNotification({
+    await queueEmailNotification({
       kind: "purchase",
       postId: purchaseRef.id,
       title: request.name,
@@ -626,7 +626,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       lastActivityType: "created",
       expiresAt: addDays(new Date(), POST_RETENTION_DAYS),
     });
-    await queueEmailNotification({
+    await sendPushNotification({
       kind: "report",
       postId: reportRef.id,
       title: targetMember.displayName,
@@ -634,7 +634,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       createdByName: getUserDisplayName(authUser, profileDisplayName),
       path: `/reports/${reportRef.id}`,
     });
-    await sendPushNotification({
+    await queueEmailNotification({
       kind: "report",
       postId: reportRef.id,
       title: targetMember.displayName,
@@ -904,21 +904,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const notificationRef = doc(collection(db, EMAIL_NOTIFICATION_COLLECTION));
-    await setDoc(notificationRef, {
-      houseId: currentHouse.id,
-      houseName: currentHouse.name,
-      kind,
-      postId,
-      title,
-      body,
-      createdBy: authUser.uid,
-      createdByName,
-      recipients,
-      url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}${path}`,
-      status: "pending",
-      createdAt: serverTimestamp(),
-    });
+    try {
+      const notificationRef = doc(collection(db, EMAIL_NOTIFICATION_COLLECTION));
+      await setDoc(notificationRef, {
+        houseId: currentHouse.id,
+        houseName: currentHouse.name,
+        kind,
+        postId,
+        title,
+        body,
+        createdBy: authUser.uid,
+        createdByName,
+        recipients,
+        url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}${path}`,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.warn("Email notification queue failed", error);
+    }
   }
 
   async function sendPushNotification({
@@ -940,6 +944,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const recipientUserIds = members.map((member) => member.userId);
+
     try {
       await fetch(PUSH_WEBHOOK_URL, {
         method: "POST",
@@ -954,6 +960,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           title,
           body,
           createdByName,
+          recipientUserIds,
           url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}${path}`,
         }),
       });

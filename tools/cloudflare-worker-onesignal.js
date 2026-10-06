@@ -30,6 +30,9 @@ export default {
     const body = asText(payload.body, 140);
     const createdByName = asText(payload.createdByName, 80);
     const url = asText(payload.url, 500);
+    const recipientUserIds = Array.isArray(payload.recipientUserIds)
+      ? payload.recipientUserIds.map((id) => asText(id, 120)).filter(Boolean).slice(0, 2000)
+      : [];
 
     if (!houseId || !title || !env.ONESIGNAL_APP_ID || !env.ONESIGNAL_REST_API_KEY) {
       return corsResponse({ error: "Missing required data" }, 400);
@@ -49,7 +52,9 @@ export default {
         headings: { en: heading, zh: heading },
         contents: { en: content, zh: content },
         url,
-        filters: [{ field: "tag", key: "house_id", relation: "=", value: houseId }],
+        ...(recipientUserIds.length > 0
+          ? { include_aliases: { external_id: recipientUserIds } }
+          : { filters: [{ field: "tag", key: "house_id", relation: "=", value: houseId }] }),
         data: {
           houseId,
           houseName,
