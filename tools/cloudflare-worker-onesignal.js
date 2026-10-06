@@ -40,7 +40,7 @@ export default {
     }
 
     const heading = "有新的折子请审阅！";
-    const content = `您的同僚“${createdById || createdByName || "有人"}”提交新折子了，快去看看吧`;
+    const content = `您的同僚“${createdByName || createdById || "有人"}”提交新折子了，快去看看吧`;
     const response = await fetch(ONESIGNAL_API_URL, {
       method: "POST",
       headers: {
