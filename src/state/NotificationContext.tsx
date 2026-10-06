@@ -52,16 +52,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [permission, setPermission] = useState<NotificationPermissionState>(() => getNotificationPermission());
   const [localNotificationsEnabled, setLocalNotificationsEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "true");
   const [oneSignalEnabled, setOneSignalEnabled] = useState(false);
-  const [oneSignalSupported, setOneSignalSupported] = useState(false);
   const lastNotifiedEventId = useRef<string | null>(null);
   const oneSignalPromise = useRef<Promise<OneSignalSdk | null> | null>(null);
   const oneSignalUserId = useRef<string | null>(null);
 
   const isOneSignalConfigured = Boolean(ONESIGNAL_APP_ID);
-  const isAvailable =
-    isFirebaseMode &&
-    Boolean(currentHouse) &&
-    (isOneSignalConfigured ? oneSignalSupported : permission !== "unsupported");
+  const isAvailable = isFirebaseMode && Boolean(currentHouse) && permission !== "unsupported";
 
   useEffect(() => {
     lastNotifiedEventId.current = activityEvents.at(-1)?.id ?? null;
@@ -77,7 +73,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setOneSignalSupported(oneSignal.Notifications.isPushSupported());
+      if (!oneSignal.Notifications.isPushSupported()) {
+        return;
+      }
       if (oneSignalUserId.current !== authUser.uid) {
         await oneSignal.login(authUser.uid);
         oneSignalUserId.current = authUser.uid;
@@ -88,7 +86,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setPermission(oneSignal.Notifications.permissionNative);
     }).catch((error) => {
       console.warn("OneSignal setup failed", error);
-      setOneSignalSupported(false);
     });
   }, [authUser, currentHouse, isOneSignalConfigured]);
 
