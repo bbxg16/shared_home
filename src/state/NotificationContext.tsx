@@ -181,9 +181,9 @@ function getOneSignal(oneSignalPromise: MutableRefObject<Promise<OneSignalSdk | 
         appId: ONESIGNAL_APP_ID,
         allowLocalhostAsSecureOrigin: window.location.hostname === "localhost",
         serviceWorkerParam: {
-          scope: `${import.meta.env.BASE_URL}onesignal/`,
+          scope: import.meta.env.BASE_URL,
         },
-        serviceWorkerPath: `${import.meta.env.BASE_URL}onesignal/OneSignalSDKWorker.js`,
+        serviceWorkerPath: `${import.meta.env.BASE_URL}OneSignalSDKWorker.js`,
       }).then(() => oneSignal);
     });
   }
