@@ -36,9 +36,12 @@ VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
+VITE_ONESIGNAL_APP_ID=
 ```
 
 `.env.local` is gitignored and should never be committed. Double-check the API key and App ID directly in the Firebase Console — copy/paste through chat tools sometimes introduces stray backslashes (`\_`, `\:`) that must not appear in the real values.
+
+`VITE_ONESIGNAL_APP_ID` is optional. When it is set, the app loads OneSignal Web Push, lets signed-in members subscribe from the bell button, and logs them into OneSignal with their Firebase UID as the external ID. Do not put your OneSignal REST API key in `.env.local`; that key must stay server-side.
 
 ### 3. Run the dev server
 
@@ -60,6 +63,8 @@ npm run build
 - Add `bbxg16.github.io` in **Authentication → Settings → Authorized domains** for the GitHub Pages test link.
 - Keep Firestore rules scoped to authenticated users before sharing the app.
 - `firestore.rules` and `firebase.json` are included. Deploy rules with the Firebase CLI after selecting your project.
+- Optional: create a OneSignal Web Push app and add the App ID to `VITE_ONESIGNAL_APP_ID`. For GitHub Pages, configure the site URL as `https://bbxg16.github.io/shared_home/`. iPhone users still need to add the site to the Home Screen before iOS web push can work.
+- For GitHub Pages deployment, add a repository secret named `VITE_ONESIGNAL_APP_ID` with the OneSignal App ID, then rerun the Pages workflow. The public App ID is safe to expose; the OneSignal REST API key is not.
 
 The House screen includes a Firebase panel for basic verification:
 

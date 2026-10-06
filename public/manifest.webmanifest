@@ -1,0 +1,17 @@
+{
+  "name": "有本要奏",
+  "short_name": "有本要奏",
+  "start_url": "/shared_home/",
+  "scope": "/shared_home/",
+  "display": "standalone",
+  "background_color": "#F3F6EE",
+  "theme_color": "#F3F6EE",
+  "icons": [
+    {
+      "src": "/shared_home/app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
