@@ -11,7 +11,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ title, subtitle, action }: AppHeaderProps) {
   const { language, setLanguage, t } = useLanguage();
-  const { isAvailable, isEnabled, permission, status, toggleNotifications } = useNotifications();
+  const { isAvailable, isEnabled, permission, status, statusDetail, toggleNotifications } = useNotifications();
   const notificationLabel = isEnabled
     ? t("notificationsOn")
     : permission === "denied"
@@ -48,7 +48,11 @@ export function AppHeader({ title, subtitle, action }: AppHeaderProps) {
             >
               {isEnabled ? <Bell className="h-5 w-5" strokeWidth={1.75} /> : <BellOff className="h-5 w-5" strokeWidth={1.75} />}
             </button>
-            {notificationStatus ? <span className="max-w-20 text-center text-[10px] font-semibold leading-tight text-ink-soft">{notificationStatus}</span> : null}
+            {notificationStatus ? (
+              <span className="max-w-24 text-center text-[10px] font-semibold leading-tight text-ink-soft" title={statusDetail || notificationStatus}>
+                {statusDetail || notificationStatus}
+              </span>
+            ) : null}
           </div>
         ) : null}
         <button

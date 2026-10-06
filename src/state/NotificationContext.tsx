@@ -41,6 +41,7 @@ interface NotificationContextValue {
   isEnabled: boolean;
   permission: NotificationPermissionState;
   status: NotificationStatus;
+  statusDetail: string;
   toggleNotifications: () => Promise<void>;
 }
 
@@ -55,6 +56,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [localNotificationsEnabled, setLocalNotificationsEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "true");
   const [oneSignalEnabled, setOneSignalEnabled] = useState(false);
   const [status, setStatus] = useState<NotificationStatus>("idle");
+  const [statusDetail, setStatusDetail] = useState("");
   const lastNotifiedEventId = useRef<string | null>(null);
   const oneSignalPromise = useRef<Promise<OneSignalSdk | null> | null>(null);
   const oneSignalUserId = useRef<string | null>(null);
@@ -88,9 +90,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setOneSignalEnabled(oneSignal.User.PushSubscription.optedIn);
       setPermission(oneSignal.Notifications.permissionNative);
       setStatus(oneSignal.User.PushSubscription.optedIn ? "ready" : "idle");
+      setStatusDetail("");
     }).catch((error) => {
       console.warn("OneSignal setup failed", error);
+      oneSignalPromise.current = null;
       setStatus("error");
+      setStatusDetail(getErrorMessage(error));
     });
   }, [authUser, currentHouse, isOneSignalConfigured]);
 
@@ -117,18 +122,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       isEnabled: isAvailable && (isOneSignalConfigured ? oneSignalEnabled : localNotificationsEnabled && permission === "granted"),
       permission,
       status,
+      statusDetail,
       toggleNotifications: async () => {
         if (isOneSignalConfigured) {
           if (permission === "unsupported") {
             setStatus("error");
+            setStatusDetail("This browser does not support web push.");
             return;
           }
 
           try {
             setStatus("working");
+            setStatusDetail("");
             const oneSignal = await getOneSignal(oneSignalPromise);
             if (!oneSignal || !oneSignal.Notifications.isPushSupported()) {
               setStatus("error");
+              setStatusDetail("This browser does not support OneSignal web push.");
               return;
             }
 
@@ -136,22 +145,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               await oneSignal.User.PushSubscription.optOut();
               setOneSignalEnabled(false);
               setStatus("idle");
+              setStatusDetail("");
             } else {
               const allowed = oneSignal.Notifications.permission || await oneSignal.Notifications.requestPermission();
               const nextPermission = oneSignal.Notifications.permissionNative || Notification.permission;
               setPermission(nextPermission);
               if (!allowed || nextPermission !== "granted") {
                 setStatus("blocked");
+                setStatusDetail("");
                 return;
               }
               await oneSignal.User.PushSubscription.optIn();
               setOneSignalEnabled(oneSignal.User.PushSubscription.optedIn);
               setStatus(oneSignal.User.PushSubscription.optedIn ? "ready" : "error");
+              setStatusDetail(oneSignal.User.PushSubscription.optedIn ? "" : "OneSignal did not create a push subscription.");
             }
             setPermission(oneSignal.Notifications.permissionNative);
           } catch (error) {
             console.warn("OneSignal subscription failed", error);
+            oneSignalPromise.current = null;
             setStatus("error");
+            setStatusDetail(getErrorMessage(error));
           }
           return;
         }
@@ -175,9 +189,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(STORAGE_KEY, String(nextEnabled));
         setLocalNotificationsEnabled(nextEnabled);
         setStatus(nextEnabled ? "ready" : "blocked");
+        setStatusDetail("");
       },
     }),
-    [activityEvents, isAvailable, isOneSignalConfigured, localNotificationsEnabled, oneSignalEnabled, permission, status]
+    [activityEvents, isAvailable, isOneSignalConfigured, localNotificationsEnabled, oneSignalEnabled, permission, status, statusDetail]
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
@@ -196,6 +211,16 @@ function getNotificationPermission(): NotificationPermissionState {
     return "unsupported";
   }
   return Notification.permission;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return "Unknown OneSignal error.";
 }
 
 function getOneSignal(oneSignalPromise: MutableRefObject<Promise<OneSignalSdk | null> | null>) {
