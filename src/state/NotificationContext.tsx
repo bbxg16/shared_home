@@ -113,15 +113,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       permission,
       toggleNotifications: async () => {
         if (isOneSignalConfigured) {
-          const oneSignal = await getOneSignal(oneSignalPromise);
-          if (!oneSignal) {
+          if (permission === "unsupported") {
             return;
           }
 
-          if (oneSignal.User.PushSubscription.optedIn) {
+          if (!oneSignalEnabled) {
+            const nextPermission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+            setPermission(nextPermission);
+            if (nextPermission !== "granted") {
+              return;
+            }
+          }
+
+          const oneSignal = await getOneSignal(oneSignalPromise);
+          if (!oneSignal || !oneSignal.Notifications.isPushSupported()) {
+            return;
+          }
+
+          if (oneSignalEnabled || oneSignal.User.PushSubscription.optedIn) {
             await oneSignal.User.PushSubscription.optOut();
           } else {
-            await oneSignal.Notifications.requestPermission();
             await oneSignal.User.PushSubscription.optIn();
           }
           setOneSignalEnabled(oneSignal.User.PushSubscription.optedIn);
