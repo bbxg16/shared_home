@@ -61,6 +61,18 @@ interface NewReport {
   comments: string;
 }
 
+interface PurchaseUpdate {
+  name: string;
+  productUrl?: string;
+  imageDataUrl?: string;
+  price?: string;
+  description: string;
+}
+
+interface ReportUpdate {
+  comments: string;
+}
+
 interface AppDataContextValue {
   authUser: User | null;
   currentUser: HouseMember;
@@ -81,9 +93,11 @@ interface AppDataContextValue {
   updateHomeName: (name: string) => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
   createPurchaseRequest: (request: NewPurchaseRequest) => Promise<void>;
+  updatePurchaseRequest: (purchaseId: string, request: PurchaseUpdate) => Promise<void>;
   deletePurchaseRequest: (purchaseId: string) => Promise<void>;
   voteOnPurchase: (purchaseId: string, vote: Vote["vote"], comment?: string) => Promise<void>;
   createReport: (report: NewReport) => Promise<void>;
+  updateReport: (reportId: string, report: ReportUpdate) => Promise<void>;
   deleteReport: (reportId: string) => Promise<void>;
   respondToReport: (reportId: string, response: string) => Promise<void>;
   voteOnReport: (reportId: string, vote: ReportVote["vote"], comment?: string) => Promise<void>;
@@ -233,7 +247,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               const action = change.type === "added" ? "created" : purchase.lastActivityType;
               const createdBy = change.type === "added" ? purchase.requestedBy : purchase.lastActivityBy;
               if (
-                (action === "created" || action === "voted") &&
+                (action === "created" || action === "updated" || action === "voted") &&
                 createdBy &&
                 createdBy !== authUser.uid
               ) {
@@ -264,7 +278,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               const action = change.type === "added" ? "created" : report.lastActivityType;
               const createdBy = change.type === "added" ? report.reportedBy : report.lastActivityBy;
               if (
-                (action === "created" || action === "voted" || action === "responded") &&
+                (action === "created" || action === "updated" || action === "voted" || action === "responded") &&
                 createdBy &&
                 createdBy !== authUser.uid
               ) {
@@ -558,6 +572,62 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await deletePostWithVotes(doc(db, "houses", currentHouse.id, "purchases", purchaseId));
   }
 
+  async function updatePurchaseRequest(purchaseId: string, request: PurchaseUpdate) {
+    const purchase = purchases.find((item) => item.id === purchaseId);
+    if (!purchase) {
+      return;
+    }
+
+    if (!db || !authUser || !currentHouse) {
+      if (purchase.requestedBy === currentUser.userId) {
+        const updatedAt = new Date().toISOString();
+        setPurchases((current) =>
+          current.map((item) =>
+            item.id === purchaseId
+              ? {
+                  ...item,
+                  name: request.name,
+                  productUrl: request.productUrl?.trim() || undefined,
+                  imageDataUrl: request.imageDataUrl,
+                  price: request.price?.trim() || undefined,
+                  description: request.description,
+                  lastActivityAt: updatedAt,
+                  lastActivityBy: currentUser.userId,
+                  lastActivityType: "updated",
+                }
+              : item
+          )
+        );
+      }
+      return;
+    }
+
+    if (purchase.requestedBy !== authUser.uid) {
+      throw new Error("Only the requester can edit this request.");
+    }
+
+    await updateDoc(doc(db, "houses", currentHouse.id, "purchases", purchaseId), {
+      name: request.name,
+      productUrl: request.productUrl?.trim() || null,
+      imageDataUrl: request.imageDataUrl ?? null,
+      price: request.price?.trim() || null,
+      description: request.description,
+      lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "updated",
+    });
+
+    await sendPushNotification({
+      action: "updated",
+      kind: "purchase",
+      postId: purchaseId,
+      title: request.name,
+      body: request.description,
+      createdByName: getUserDisplayName(authUser, profileDisplayName),
+      path: `/purchases/${purchaseId}`,
+    });
+  }
+
   async function voteOnPurchase(purchaseId: string, vote: Vote["vote"], comment = "") {
     if (isFirebaseConfigured && (!db || !authUser || !currentHouse)) {
       setError("Sign in and join a home before voting.");
@@ -667,6 +737,55 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     await deletePostWithVotes(doc(db, "houses", currentHouse.id, "reports", reportId));
+  }
+
+  async function updateReport(reportId: string, reportUpdate: ReportUpdate) {
+    const report = reports.find((item) => item.id === reportId);
+    const trimmedComments = reportUpdate.comments.trim();
+    if (!report || !trimmedComments) {
+      return;
+    }
+
+    if (!db || !authUser || !currentHouse) {
+      if (report.reportedBy === currentUser.userId) {
+        const updatedAt = new Date().toISOString();
+        setReports((current) =>
+          current.map((item) =>
+            item.id === reportId
+              ? {
+                  ...item,
+                  comments: trimmedComments,
+                  lastActivityAt: updatedAt,
+                  lastActivityBy: currentUser.userId,
+                  lastActivityType: "updated",
+                }
+              : item
+          )
+        );
+      }
+      return;
+    }
+
+    if (report.reportedBy !== authUser.uid) {
+      throw new Error("Only the reporter can edit this report.");
+    }
+
+    await updateDoc(doc(db, "houses", currentHouse.id, "reports", reportId), {
+      comments: trimmedComments,
+      lastActivityAt: serverTimestamp(),
+      lastActivityBy: authUser.uid,
+      lastActivityType: "updated",
+    });
+
+    await sendPushNotification({
+      action: "updated",
+      kind: "report",
+      postId: reportId,
+      title: report.targetUserName,
+      body: trimmedComments,
+      createdByName: getUserDisplayName(authUser, profileDisplayName),
+      path: `/reports/${reportId}`,
+    });
   }
 
   async function respondToReport(reportId: string, response: string) {
@@ -926,6 +1045,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function sendPushNotification({
+    action = "created",
     kind,
     postId,
     title,
@@ -933,6 +1053,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     createdByName,
     path,
   }: {
+    action?: "created" | "updated";
     kind: "purchase" | "report";
     postId: string;
     title: string;
@@ -955,6 +1076,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           houseId: currentHouse.id,
           houseName: currentHouse.name,
+          action,
           kind,
           postId,
           title,
@@ -991,9 +1113,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         updateHomeName,
         removeMember,
         createPurchaseRequest,
+        updatePurchaseRequest,
         deletePurchaseRequest,
         voteOnPurchase,
         createReport,
+        updateReport,
         deleteReport,
         respondToReport,
         voteOnReport,
@@ -1050,7 +1174,10 @@ function parsePurchase(snapshot: QueryDocumentSnapshot<DocumentData>): Purchase 
     createdAt: dateValueToIso(data.createdAt),
     lastActivityAt: data.lastActivityAt ? dateValueToIso(data.lastActivityAt) : dateValueToIso(data.createdAt),
     lastActivityBy: data.lastActivityBy ? String(data.lastActivityBy) : undefined,
-    lastActivityType: data.lastActivityType === "voted" ? "voted" : data.lastActivityType === "created" ? "created" : undefined,
+    lastActivityType:
+      data.lastActivityType === "voted" || data.lastActivityType === "created" || data.lastActivityType === "updated"
+        ? data.lastActivityType
+        : undefined,
     expiresAt: dateValueToIso(data.expiresAt),
   };
 }
@@ -1084,7 +1211,10 @@ function parseReport(snapshot: QueryDocumentSnapshot<DocumentData>): Report {
     lastActivityAt: data.lastActivityAt ? dateValueToIso(data.lastActivityAt) : dateValueToIso(data.createdAt),
     lastActivityBy: data.lastActivityBy ? String(data.lastActivityBy) : undefined,
     lastActivityType:
-      data.lastActivityType === "voted" || data.lastActivityType === "created" || data.lastActivityType === "responded"
+      data.lastActivityType === "voted" ||
+      data.lastActivityType === "created" ||
+      data.lastActivityType === "updated" ||
+      data.lastActivityType === "responded"
         ? data.lastActivityType
         : undefined,
     expiresAt: dateValueToIso(data.expiresAt),

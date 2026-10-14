@@ -25,6 +25,7 @@ export default {
 
     const houseId = asText(payload.houseId, 120);
     const houseName = asText(payload.houseName, 80);
+    const action = payload.action === "updated" ? "updated" : "created";
     const kind = payload.kind === "report" ? "report" : "purchase";
     const title = asText(payload.title, 80);
     const body = asText(payload.body, 140);
@@ -39,8 +40,9 @@ export default {
       return corsResponse({ error: "Missing required data" }, 400);
     }
 
-    const heading = "有新的折子请审阅！";
-    const content = `您的同僚“${createdByName || createdById || "有人"}”提交新折子了，快去看看吧`;
+    const heading = action === "updated" ? "有折子更新请审阅！" : "有新的折子请审阅！";
+    const actionText = action === "updated" ? "更新折子了" : "提交新折子了";
+    const content = `您的同僚“${createdByName || createdById || "有人"}”${actionText}，快去看看吧`;
     const response = await fetch(ONESIGNAL_API_URL, {
       method: "POST",
       headers: {
@@ -59,6 +61,7 @@ export default {
         data: {
           houseId,
           houseName,
+          action,
           kind,
           postId: asText(payload.postId, 120),
         },

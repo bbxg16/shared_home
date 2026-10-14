@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Copy, Tags, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, Image as ImageIcon, Pencil, Tags, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { compressImage, MAX_IMAGE_DATA_URL_LENGTH } from "@/lib/image";
 import { useAppData } from "@/state/AppDataContext";
 import { useLanguage } from "@/state/LanguageContext";
 import type { VoteType } from "@/types";
@@ -11,9 +12,19 @@ export function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { language, t } = useLanguage();
-  const { currentUser, purchases, purchaseVotes, voteOnPurchase, deletePurchaseRequest } = useAppData();
+  const { currentUser, purchases, purchaseVotes, voteOnPurchase, updatePurchaseRequest, deletePurchaseRequest } = useAppData();
   const [comment, setComment] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editProductUrl, setEditProductUrl] = useState("");
+  const [editImageDataUrl, setEditImageDataUrl] = useState<string | undefined>();
+  const [editImageError, setEditImageError] = useState("");
+  const [editImageInputVersion, setEditImageInputVersion] = useState(0);
+  const [editDescription, setEditDescription] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editMessage, setEditMessage] = useState("");
   const purchase = purchases.find((item) => item.id === id);
   const votes = purchaseVotes[purchase?.id ?? ""] ?? [];
   const currentVote = votes.find((vote) => vote.userId === currentUser.userId);
@@ -21,6 +32,19 @@ export function PurchaseDetailPage() {
   useEffect(() => {
     setComment(currentVote?.comment ?? "");
   }, [currentVote?.comment, currentVote?.vote, purchase?.id]);
+
+  useEffect(() => {
+    if (!purchase || isEditing) {
+      return;
+    }
+    setEditName(purchase.name);
+    setEditPrice(purchase.price ?? "");
+    setEditProductUrl(purchase.productUrl ?? "");
+    setEditImageDataUrl(purchase.imageDataUrl);
+    setEditDescription(purchase.description);
+    setEditImageError("");
+    setEditMessage("");
+  }, [isEditing, purchase]);
 
   if (!purchase) {
     return (
@@ -62,6 +86,68 @@ export function PurchaseDetailPage() {
     navigate("/purchases");
   }
 
+  function startEditing() {
+    if (!purchase) {
+      return;
+    }
+    setEditName(purchase.name);
+    setEditPrice(purchase.price ?? "");
+    setEditProductUrl(purchase.productUrl ?? "");
+    setEditImageDataUrl(purchase.imageDataUrl);
+    setEditDescription(purchase.description);
+    setEditImageError("");
+    setEditMessage("");
+    setIsEditing(true);
+  }
+
+  async function handleEditImageChange(file?: File) {
+    setEditImageError("");
+    if (!file) {
+      return;
+    }
+
+    try {
+      const nextImageDataUrl = await compressImage(file);
+      if (nextImageDataUrl.length > MAX_IMAGE_DATA_URL_LENGTH) {
+        setEditImageError(t("imageTooLarge"));
+        return;
+      }
+      setEditImageDataUrl(nextImageDataUrl);
+    } catch {
+      setEditImageError(t("imageReadFailed"));
+    }
+  }
+
+  function removeEditImage() {
+    setEditImageDataUrl(undefined);
+    setEditImageError("");
+    setEditImageInputVersion((current) => current + 1);
+  }
+
+  async function handleSaveEdit() {
+    if (!editName.trim() || !editDescription.trim()) {
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditMessage("");
+    try {
+      await updatePurchaseRequest(purchaseId, {
+        name: editName.trim(),
+        productUrl: editProductUrl.trim() || undefined,
+        imageDataUrl: editImageDataUrl,
+        price: editPrice.trim() || undefined,
+        description: editDescription.trim(),
+      });
+      setIsEditing(false);
+      setEditMessage(t("postUpdated"));
+    } catch (error) {
+      setEditMessage(error instanceof Error ? error.message : t("couldNotUpdatePost"));
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   async function copyProductLink() {
     if (!productUrl) {
       return;
@@ -94,14 +180,92 @@ export function PurchaseDetailPage() {
 
       <div className="flex flex-col gap-4 px-5">
         {isRequester ? (
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            className="flex items-center justify-center gap-2 rounded-card border border-clay-500/40 bg-white py-2.5 text-sm font-medium text-clay-700"
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
-            {t("deleteRequest")}
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={isEditing ? () => setIsEditing(false) : startEditing}
+              className="flex items-center justify-center gap-2 rounded-card border border-sage-500/40 bg-white py-2.5 text-sm font-medium text-sage-700"
+            >
+              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+              {isEditing ? t("cancel") : t("editPost")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              className="flex items-center justify-center gap-2 rounded-card border border-clay-500/40 bg-white py-2.5 text-sm font-medium text-clay-700"
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+              {t("deleteRequest")}
+            </button>
+          </div>
+        ) : null}
+
+        {isEditing ? (
+          <section className="pinned-card flex flex-col gap-3">
+            <input
+              value={editName}
+              onChange={(event) => setEditName(event.target.value)}
+              placeholder={t("requestNamePlaceholder")}
+              className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+            />
+            <input
+              value={editPrice}
+              onChange={(event) => setEditPrice(event.target.value)}
+              inputMode="text"
+              placeholder={t("price")}
+              className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+            />
+            <input
+              value={editProductUrl}
+              onChange={(event) => setEditProductUrl(event.target.value)}
+              inputMode="url"
+              placeholder={t("productLinkOptional")}
+              className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+            />
+            <div className="rounded-card border border-ink/10 p-3">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-card bg-ink/[0.05] py-2 text-sm font-medium text-ink-soft">
+                <ImageIcon className="h-4 w-4" strokeWidth={1.75} />
+                {t("imageOptional")}
+                <input
+                  key={editImageInputVersion}
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => void handleEditImageChange(event.target.files?.[0])}
+                  className="sr-only"
+                />
+              </label>
+              {editImageDataUrl ? (
+                <div className="mt-3">
+                  <img src={editImageDataUrl} alt="" className="max-h-56 w-full rounded-card object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeEditImage}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-card border border-clay-500/40 py-2 text-sm font-medium text-clay-700"
+                  >
+                    <X className="h-4 w-4" strokeWidth={1.75} />
+                    {t("removeImage")}
+                  </button>
+                </div>
+              ) : null}
+              {editImageError ? <p className="mt-2 text-sm text-clay-700">{editImageError}</p> : null}
+            </div>
+            <textarea
+              value={editDescription}
+              onChange={(event) => setEditDescription(event.target.value)}
+              placeholder={t("description")}
+              rows={3}
+              className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+            />
+            <button
+              type="button"
+              disabled={isSavingEdit || !editName.trim() || !editDescription.trim()}
+              onClick={() => void handleSaveEdit()}
+              className="rounded-card bg-sage-500 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {isSavingEdit ? t("working") : t("saveChanges")}
+            </button>
+            {editMessage ? <p className="text-sm text-ink-soft">{editMessage}</p> : null}
+          </section>
         ) : null}
 
         <section className="pinned-card">

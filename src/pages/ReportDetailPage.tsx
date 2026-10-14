@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, FileWarning, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, FileWarning, Pencil, Trash2, X } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAppData } from "@/state/AppDataContext";
@@ -11,10 +11,14 @@ export function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { language, t } = useLanguage();
-  const { currentUser, reports, reportVotes, voteOnReport, deleteReport, respondToReport } = useAppData();
+  const { currentUser, reports, reportVotes, voteOnReport, updateReport, deleteReport, respondToReport } = useAppData();
   const [comment, setComment] = useState("");
+  const [isEditingReport, setIsEditingReport] = useState(false);
+  const [editComments, setEditComments] = useState("");
   const [targetResponse, setTargetResponse] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [editMessage, setEditMessage] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const report = reports.find((item) => item.id === id);
   const votes = reportVotes[report?.id ?? ""] ?? [];
   const currentVote = votes.find((vote) => vote.userId === currentUser.userId);
@@ -22,6 +26,14 @@ export function ReportDetailPage() {
   useEffect(() => {
     setTargetResponse(report?.targetResponse ?? "");
   }, [report?.targetResponse]);
+
+  useEffect(() => {
+    if (!report || isEditingReport) {
+      return;
+    }
+    setEditComments(report.comments);
+    setEditMessage(null);
+  }, [isEditingReport, report]);
 
   useEffect(() => {
     setComment(currentVote?.comment ?? "");
@@ -66,6 +78,33 @@ export function ReportDetailPage() {
     navigate("/reports");
   }
 
+  function startEditingReport() {
+    if (!report) {
+      return;
+    }
+    setEditComments(report.comments);
+    setEditMessage(null);
+    setIsEditingReport(true);
+  }
+
+  async function handleSaveReportEdit() {
+    if (!editComments.trim()) {
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditMessage(null);
+    try {
+      await updateReport(reportId, { comments: editComments.trim() });
+      setIsEditingReport(false);
+      setEditMessage(t("postUpdated"));
+    } catch (error) {
+      setEditMessage(error instanceof Error ? error.message : t("couldNotUpdatePost"));
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   async function handleSaveResponse() {
     setMessage(null);
     try {
@@ -100,14 +139,45 @@ export function ReportDetailPage() {
 
       <div className="flex flex-col gap-4 px-5">
         {isReporter ? (
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            className="flex items-center justify-center gap-2 rounded-card border border-clay-500/40 bg-white py-2.5 text-sm font-medium text-clay-700"
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
-            {t("deleteReport")}
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={isEditingReport ? () => setIsEditingReport(false) : startEditingReport}
+              className="flex items-center justify-center gap-2 rounded-card border border-sage-500/40 bg-white py-2.5 text-sm font-medium text-sage-700"
+            >
+              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+              {isEditingReport ? t("cancel") : t("editPost")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              className="flex items-center justify-center gap-2 rounded-card border border-clay-500/40 bg-white py-2.5 text-sm font-medium text-clay-700"
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+              {t("deleteReport")}
+            </button>
+          </div>
+        ) : null}
+
+        {isEditingReport ? (
+          <section className="pinned-card flex flex-col gap-3">
+            <textarea
+              value={editComments}
+              onChange={(event) => setEditComments(event.target.value)}
+              placeholder={t("comments")}
+              rows={3}
+              className="rounded-card border border-ink/10 px-3 py-2 text-sm outline-none focus:border-sage-500"
+            />
+            <button
+              type="button"
+              disabled={isSavingEdit || !editComments.trim()}
+              onClick={() => void handleSaveReportEdit()}
+              className="rounded-card bg-sage-500 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {isSavingEdit ? t("working") : t("saveChanges")}
+            </button>
+            {editMessage ? <p className="text-sm text-ink-soft">{editMessage}</p> : null}
+          </section>
         ) : null}
 
         <section className="pinned-card">

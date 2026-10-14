@@ -254,7 +254,7 @@ function getOneSignal(oneSignalPromise: MutableRefObject<Promise<OneSignalSdk | 
         safari_web_id: ONESIGNAL_SAFARI_WEB_ID,
         allowLocalhostAsSecureOrigin: window.location.hostname === "localhost",
         notifyButton: {
-          enable: true,
+          enable: false,
         },
         serviceWorkerParam: {
           scope: import.meta.env.BASE_URL,

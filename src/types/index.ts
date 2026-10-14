@@ -42,7 +42,7 @@ export interface Purchase {
   createdAt: string;
   lastActivityAt: string;
   lastActivityBy?: string;
-  lastActivityType?: "created" | "voted";
+  lastActivityType?: "created" | "updated" | "voted";
   expiresAt: string;
 }
 
@@ -69,7 +69,7 @@ export interface Report {
   createdAt: string;
   lastActivityAt: string;
   lastActivityBy?: string;
-  lastActivityType?: "created" | "voted" | "responded";
+  lastActivityType?: "created" | "updated" | "voted" | "responded";
   expiresAt: string;
 }
 
@@ -92,7 +92,7 @@ export interface WeeklyReportSummary {
 export interface HouseActivity {
   id: string;
   kind: "purchase" | "report";
-  action: "created" | "voted" | "responded";
+  action: "created" | "updated" | "voted" | "responded";
   createdBy: string;
   createdAt: string;
 }
