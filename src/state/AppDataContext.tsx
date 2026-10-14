@@ -46,6 +46,7 @@ import type {
   Vote,
   WeeklyReportSummary,
   HouseActivity,
+  SystemMessage,
 } from "@/types";
 
 interface NewPurchaseRequest {
@@ -84,6 +85,7 @@ interface AppDataContextValue {
   reportVotes: Record<string, ReportVote[]>;
   weeklyReportSummaries: WeeklyReportSummary[];
   activityEvents: HouseActivity[];
+  systemMessages: SystemMessage[];
   isFirebaseMode: boolean;
   isLoading: boolean;
   error: string | null;
@@ -117,6 +119,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [reports, setReports] = useState<Report[]>(isFirebaseConfigured ? [] : mockReports);
   const [reportVotes, setReportVotes] = useState<Record<string, ReportVote[]>>(isFirebaseConfigured ? {} : mockReportVotes);
   const [activityEvents, setActivityEvents] = useState<HouseActivity[]>([]);
+  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
   const [isLoading, setIsLoading] = useState(isFirebaseConfigured);
   const [error, setError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
@@ -171,9 +174,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setReports([]);
         setReportVotes({});
         setActivityEvents([]);
+        setSystemMessages([]);
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (!db || !authUser) {
+      setSystemMessages([]);
+      return () => undefined;
+    }
+
+    return onSnapshot(
+      query(collection(db, "systemMessages"), orderBy("publishedAt", "desc"), limit(20)),
+      (snapshot) => setSystemMessages(snapshot.docs.map(parseSystemMessage)),
+      (snapshotError) => setError(formatFirebaseError(snapshotError.message))
+    );
+  }, [authUser]);
 
   useEffect(() => {
     if (!db || !authUser) {
@@ -1104,6 +1121,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         reportVotes,
         weeklyReportSummaries,
         activityEvents,
+        systemMessages,
         isFirebaseMode: isFirebaseConfigured,
         isLoading,
         error,
@@ -1229,6 +1247,17 @@ function parseReportVote(snapshot: QueryDocumentSnapshot<DocumentData>): ReportV
     vote: data.vote === "disagree" ? "disagree" : "agree",
     comment: data.comment ? String(data.comment) : undefined,
     createdAt: dateValueToIso(data.createdAt),
+  };
+}
+
+function parseSystemMessage(snapshot: QueryDocumentSnapshot<DocumentData>): SystemMessage {
+  const data = snapshot.data();
+  return {
+    id: snapshot.id,
+    title: String(data.title ?? "Update"),
+    body: String(data.body ?? ""),
+    createdAt: dateValueToIso(data.createdAt),
+    publishedAt: data.publishedAt ? dateValueToIso(data.publishedAt) : dateValueToIso(data.createdAt),
   };
 }
 

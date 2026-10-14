@@ -239,6 +239,29 @@ Value: your Cloudflare Worker URL
 5. Re-run the GitHub Pages deployment.
 6. Open the app once with each browser/device and turn notifications on. The app tags each OneSignal subscription with the current `house_id`, so notifications only go to members in the same home.
 
+## System Messages
+
+The app has a `/announcements` page for version updates and system messages. OneSignal can send a short push notification that links users back to this page:
+
+```text
+https://bbxg16.github.io/shared_home/announcements
+```
+
+Create messages manually in Firebase Console under `/systemMessages/{messageId}`:
+
+```text
+title: string
+body: string
+publishedAt: timestamp
+createdAt: timestamp
+```
+
+After changing `firestore.rules`, deploy the rules:
+
+```bash
+firebase deploy --project shared-home-48f90 --only firestore:rules
+```
+
 ## Backend next up
 
 1. Create House and Join House via invite code

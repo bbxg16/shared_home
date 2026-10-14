@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { FileWarning, Home, Tags, Users } from "lucide-react";
+import { Bell, FileWarning, Home, Tags, Users } from "lucide-react";
 import { useLanguage } from "@/state/LanguageContext";
 
 const NAV_ITEMS = [
   { to: "/", labelKey: "home", icon: Home, end: true },
   { to: "/purchases", labelKey: "requests", icon: Tags, end: false },
   { to: "/reports", labelKey: "reports", icon: FileWarning, end: false },
+  { to: "/announcements", labelKey: "systemMessages", icon: Bell, end: false },
   { to: "/house", labelKey: "house", icon: Users, end: false },
 ] as const;
 

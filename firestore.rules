@@ -23,6 +23,11 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    match /systemMessages/{messageId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if false;
+    }
+
     // Prototype rule set: any signed-in user can create/join/read/write home data.
     // Tighten this before sharing publicly.
     match /houses/{houseId} {

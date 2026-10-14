@@ -96,3 +96,11 @@ export interface HouseActivity {
   createdBy: string;
   createdAt: string;
 }
+
+export interface SystemMessage {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  publishedAt: string;
+}
