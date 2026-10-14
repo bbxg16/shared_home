@@ -109,6 +109,30 @@ const AppDataContext = createContext<AppDataContextValue | null>(null);
 const POST_RETENTION_DAYS = 30;
 const EMAIL_NOTIFICATION_COLLECTION = "emailNotifications";
 const PUSH_WEBHOOK_URL = import.meta.env.VITE_PUSH_WEBHOOK_URL as string | undefined;
+const BUILT_IN_SYSTEM_MESSAGES: SystemMessage[] = [
+  {
+    id: "release-2026-10-14-images-edit-notifications",
+    title: "有本要奏又升级啦！",
+    body: [
+      "Hi 大家中午好！好消息！好消息！俺们有本要奏又升级啦！",
+      "",
+      "1. 首先现在支持添加图片啦！简直更加一目了然！",
+      "",
+      "2. 你可以编辑自己提交的折子了。进入自己的折子详情页，点击“编辑折子”，可以修改标题、价格、链接、图片和描述。已经有投票也可以修改，原来的投票不会被清掉。",
+      "",
+      "3. 折子更新后会重新提醒大家。如果有人更新了自己的折子，同一个小朝廷的成员会收到通知。",
+      "",
+      "4. 右下角多余的小红铃铛已经移除。以后只需要使用页面右上角的通知按钮。",
+      "",
+      "5. 当然还有这个系统消息的地方，恭喜你已经成功熟练运用！",
+      "",
+      "by 🍐",
+      "have a good day! 今天晚上准备吃羊肉粉，欢迎加入 @Somerset",
+    ].join("\n"),
+    createdAt: "2026-10-14T04:00:00.000Z",
+    publishedAt: "2026-10-14T04:00:00.000Z",
+  },
+];
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -119,7 +143,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [reports, setReports] = useState<Report[]>(isFirebaseConfigured ? [] : mockReports);
   const [reportVotes, setReportVotes] = useState<Record<string, ReportVote[]>>(isFirebaseConfigured ? {} : mockReportVotes);
   const [activityEvents, setActivityEvents] = useState<HouseActivity[]>([]);
-  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
+  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>(BUILT_IN_SYSTEM_MESSAGES);
   const [isLoading, setIsLoading] = useState(isFirebaseConfigured);
   const [error, setError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
@@ -174,20 +198,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setReports([]);
         setReportVotes({});
         setActivityEvents([]);
-        setSystemMessages([]);
+        setSystemMessages(BUILT_IN_SYSTEM_MESSAGES);
       }
     });
   }, []);
 
   useEffect(() => {
     if (!db || !authUser) {
-      setSystemMessages([]);
+      setSystemMessages(BUILT_IN_SYSTEM_MESSAGES);
       return () => undefined;
     }
 
     return onSnapshot(
       query(collection(db, "systemMessages"), orderBy("publishedAt", "desc"), limit(20)),
-      (snapshot) => setSystemMessages(snapshot.docs.map(parseSystemMessage)),
+      (snapshot) => setSystemMessages(mergeSystemMessages(snapshot.docs.map(parseSystemMessage))),
       (snapshotError) => setError(formatFirebaseError(snapshotError.message))
     );
   }, [authUser]);
@@ -1259,6 +1283,12 @@ function parseSystemMessage(snapshot: QueryDocumentSnapshot<DocumentData>): Syst
     createdAt: dateValueToIso(data.createdAt),
     publishedAt: data.publishedAt ? dateValueToIso(data.publishedAt) : dateValueToIso(data.createdAt),
   };
+}
+
+function mergeSystemMessages(messages: SystemMessage[]) {
+  const byId = new Map<string, SystemMessage>();
+  [...BUILT_IN_SYSTEM_MESSAGES, ...messages].forEach((message) => byId.set(message.id, message));
+  return [...byId.values()].sort((left, right) => new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime());
 }
 
 async function cleanupExpiredPosts(houseId: string) {

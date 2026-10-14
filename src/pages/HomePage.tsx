@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Bell, ChevronRight, FileWarning, Tags, Users } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
+import { getUnreadSystemMessageIds } from "@/lib/systemMessages";
 import { useAppData } from "@/state/AppDataContext";
 import { useLanguage } from "@/state/LanguageContext";
 
@@ -12,6 +13,7 @@ export function HomePage() {
   const myRequestCount = purchases.filter((purchase) => purchase.requestedBy === currentUser.userId).length;
   const houseName = currentHouse?.name ?? (isFirebaseMode ? t("noHomeJoined") : t("demoHome"));
   const latestMessage = systemMessages[0];
+  const unreadMessageIds = getUnreadSystemMessageIds(systemMessages);
 
   return (
     <div>
@@ -25,7 +27,12 @@ export function HomePage() {
                 <Bell className="h-5 w-5" strokeWidth={1.75} />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase text-honey-700">{t("latestSystemMessage")}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-medium uppercase text-honey-700">{t("latestSystemMessage")}</p>
+                  {unreadMessageIds.has(latestMessage.id) ? (
+                    <span className="rounded-full bg-clay-500 px-2 py-0.5 text-[10px] font-semibold text-white">{t("unreadSystemMessage")}</span>
+                  ) : null}
+                </div>
                 <p className="truncate font-display text-lg font-semibold text-ink">{latestMessage.title}</p>
                 <p className="line-clamp-1 text-sm text-ink-soft">{latestMessage.body}</p>
               </div>
