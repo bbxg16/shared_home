@@ -55,24 +55,17 @@ export function AppHeader({ title, subtitle, action }: AppHeaderProps) {
           {hasUnreadSystemMessages ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-clay-500 ring-2 ring-white" /> : null}
         </Link>
         {isAvailable ? (
-          <div className="flex flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={() => void toggleNotifications()}
-              className={`flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-card ${
-                isEnabled ? "text-sage-700" : "text-ink-soft"
-              }`}
-              aria-label={notificationLabel}
-              title={notificationLabel}
-            >
-              {isEnabled ? <Bell className="h-5 w-5" strokeWidth={1.75} /> : <BellOff className="h-5 w-5" strokeWidth={1.75} />}
-            </button>
-            {notificationStatus ? (
-              <span className="max-w-28 text-center text-[10px] font-semibold leading-tight text-ink-soft" title={statusDetail || notificationStatus}>
-                {statusDetail || notificationStatus}
-              </span>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            onClick={() => void toggleNotifications()}
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-card ${
+              isEnabled ? "text-sage-700" : "text-ink-soft"
+            }`}
+            aria-label={notificationLabel}
+            title={statusDetail || notificationStatus || notificationLabel}
+          >
+            {isEnabled ? <Bell className="h-5 w-5" strokeWidth={1.75} /> : <BellOff className="h-5 w-5" strokeWidth={1.75} />}
+          </button>
         ) : null}
         <button
           type="button"
