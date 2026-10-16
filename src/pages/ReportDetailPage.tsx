@@ -181,12 +181,12 @@ export function ReportDetailPage() {
         ) : null}
 
         <section className="pinned-card">
-          <dl className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="flex-shrink-0 text-ink-soft">{t("comments")}</dt>
-              <dd className="text-right text-ink">{report.comments}</dd>
+          <dl className="flex flex-col text-left text-sm">
+            <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 border-b border-ink/10 pb-3">
+              <dt className="text-ink-soft">{t("comments")}</dt>
+              <dd className="min-w-0 whitespace-pre-wrap break-words leading-relaxed text-ink">{report.comments}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 pt-3">
               <dt className="text-ink-soft">{t("clearsAfter")}</dt>
               <dd className="font-mono text-xs text-ink">{formatDate(report.expiresAt, language)}</dd>
             </div>
