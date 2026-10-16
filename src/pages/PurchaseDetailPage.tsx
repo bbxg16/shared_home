@@ -269,19 +269,19 @@ export function PurchaseDetailPage() {
         ) : null}
 
         <section className="pinned-card memorial-note">
-          <dl className="flex flex-col gap-5 text-left text-sm">
+          <dl className="flex flex-col gap-3 text-left text-sm">
             {purchase.price ? (
-              <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-ink/10 pb-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+              <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-ink/10 pb-3 sm:grid-cols-[6rem_minmax(0,1fr)]">
                 <dt className="text-ink-soft">{t("price")}</dt>
-                <dd className="min-w-0 break-words leading-7 text-ink">{purchase.price}</dd>
+                <dd className="min-w-0 break-words leading-6 text-ink">{purchase.price}</dd>
               </div>
             ) : null}
             <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
               <dt className="text-ink-soft">{t("description")}</dt>
-              <dd className="min-w-0 whitespace-pre-wrap break-words leading-7 text-ink">{purchase.description}</dd>
+              <dd className="min-w-0 whitespace-pre-wrap break-words leading-6 text-ink">{purchase.description}</dd>
             </div>
             {productUrl ? (
-              <div className="border-t border-dashed border-ink/10 pt-4">
+              <div className="border-t border-dashed border-ink/10 pt-3">
                 <dt className="text-ink-soft">{t("productLink")}</dt>
                 <dd className="mt-1 select-text break-all font-mono text-xs leading-relaxed text-ink">
                   {productUrl}
