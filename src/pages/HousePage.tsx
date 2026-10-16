@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Crown, Home, Save, Scale, UserMinus } from "lucide-react";
+import { Copy, Crown, Home, Save, Trophy, UserMinus } from "lucide-react";
 import { AppHeader } from "@/components/common/AppHeader";
 import { AccountPanel } from "@/components/common/AccountPanel";
 import { mockHouse } from "@/data/mockData";
@@ -34,7 +34,7 @@ export function HousePage() {
 
   const house = currentHouse ?? (!isFirebaseMode ? mockHouse : null);
   const isOwner = Boolean(authUser && house?.ownerId === authUser.uid);
-  const approvalRates = useMemo(() => {
+  const reviewLeaderboard = useMemo(() => {
     return members.map((member) => {
       let approvedCount = 0;
       let totalCount = 0;
@@ -54,7 +54,7 @@ export function HousePage() {
       });
 
       reports.forEach((report) => {
-        if (report.reportedBy === member.userId || report.targetUserId === member.userId) {
+        if (report.reportedBy === member.userId) {
           return;
         }
         const vote = reportVotes[report.id]?.find((item) => item.userId === member.userId);
@@ -74,8 +74,9 @@ export function HousePage() {
         totalCount,
         rate: totalCount === 0 ? null : Math.round((approvedCount / totalCount) * 100),
       };
-    });
+    }).sort((left, right) => right.totalCount - left.totalCount || left.displayName.localeCompare(right.displayName) || left.userId.localeCompare(right.userId));
   }, [members, purchaseVotes, purchases, reportVotes, reports]);
+  const mostReviews = reviewLeaderboard[0]?.totalCount ?? 0;
 
   useEffect(() => {
     setDisplayName(currentUser.displayName);
@@ -322,30 +323,41 @@ export function HousePage() {
           <section className="pinned-card">
             <div className="mb-3 flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-honey-100 text-honey-700">
-                <Scale className="h-4 w-4" strokeWidth={1.75} />
+                <Trophy className="h-4 w-4" strokeWidth={1.75} />
               </span>
               <div>
-                <p className="font-display text-base font-semibold text-ink">{t("approvalRate")}</p>
-                <p className="text-xs text-ink-soft">{t("approvalRateHint")}</p>
+                <p className="font-display text-base font-semibold text-ink">{t("reviewLeaderboard")}</p>
+                <p className="text-xs text-ink-soft">{t("reviewLeaderboardPeriod")}</p>
               </div>
             </div>
-            <ul className="flex flex-col gap-2">
-              {approvalRates.map((memberRate) => (
-                <li key={memberRate.userId} className="rounded-card bg-ink/[0.04] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="min-w-0 font-medium text-ink">{memberRate.displayName}</span>
-                    <span className="font-mono text-sm font-semibold text-ink">
-                      {memberRate.rate === null ? t("noVotesYet") : `${memberRate.rate}%`}
+            <ol className="divide-y divide-ink/[0.06]">
+              {reviewLeaderboard.map((memberRate) => {
+                const rank = reviewLeaderboard.findIndex((member) => member.totalCount === memberRate.totalCount) + 1;
+                const isLeader = rank === 1 && memberRate.totalCount > 0;
+
+                return (
+                  <li key={memberRate.userId} className="flex items-start gap-3 py-3">
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold ${isLeader ? "bg-honey-100 text-honey-700" : "text-ink-soft"}`}>
+                      {memberRate.totalCount > 0 ? rank : "–"}
                     </span>
-                  </div>
-                  {memberRate.rate !== null ? (
-                    <p className="mt-1 font-mono text-xs text-ink-soft">
-                      {memberRate.approvedCount}/{memberRate.totalCount}
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+                        <span className="min-w-0 break-words font-medium text-ink">{memberRate.displayName}</span>
+                        <span className="shrink-0 font-medium tabular-nums text-ink">
+                          {t("reviewedCount").replace("{count}", String(memberRate.totalCount))}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/[0.05]" aria-hidden="true">
+                        <div className={`h-full rounded-full ${isLeader ? "bg-honey-500" : "bg-sage-500"}`} style={{ width: `${mostReviews > 0 ? memberRate.totalCount / mostReviews * 100 : 0}%` }} />
+                      </div>
+                      <p className="mt-1.5 text-xs text-ink-soft">
+                        {memberRate.rate === null ? t("noVotesYet") : `${t("approvalRate")} ${memberRate.rate}%`}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           </section>
         ) : null}
 
