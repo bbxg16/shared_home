@@ -342,7 +342,10 @@ export function HousePage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
-                        <span className="min-w-0 break-words font-medium text-ink">{memberRate.displayName}</span>
+                        <span className="flex min-w-0 items-center gap-1.5 font-medium text-ink">
+                          {isLeader ? <Crown className="h-4 w-4 shrink-0 fill-honey-100 text-honey-700" strokeWidth={1.75} aria-hidden="true" /> : null}
+                          <span className="min-w-0 break-words">{memberRate.displayName}</span>
+                        </span>
                         <span className="shrink-0 font-medium tabular-nums text-ink">
                           {t("reviewedCount").replace("{count}", String(memberRate.totalCount))}
                         </span>
