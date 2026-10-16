@@ -46,4 +46,12 @@
     transform: rotate(-0.2deg);
   }
 
+  .pinned-card.memorial-note {
+    background-color: #fffde9;
+    border-radius: 6px;
+    box-shadow: 1px 5px 12px rgb(43 42 38 / 0.08);
+    font-family: "LXGW WenKai TC", "Kaiti SC", STKaiti, KaiTi, cursive;
+    font-weight: 400;
+  }
+
 }

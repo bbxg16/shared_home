@@ -180,10 +180,10 @@ export function ReportDetailPage() {
           </section>
         ) : null}
 
-        <section className="pinned-card">
+        <section className="pinned-card memorial-note">
           <dl className="flex flex-col text-left text-sm">
             <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
-              <dt className="text-xs font-medium text-ink-soft">{t("comments")}</dt>
+              <dt className="text-ink-soft">{t("comments")}</dt>
               <dd className="min-w-0 whitespace-pre-wrap break-words leading-7 text-ink">{report.comments}</dd>
             </div>
           </dl>
