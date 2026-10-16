@@ -269,24 +269,20 @@ export function PurchaseDetailPage() {
         ) : null}
 
         <section className="pinned-card">
-          <dl className="flex flex-col text-left text-sm">
+          <dl className="flex flex-col gap-5 text-left text-sm">
             {purchase.price ? (
-              <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 border-b border-ink/10 pb-3">
-                <dt className="text-ink-soft">{t("price")}</dt>
-                <dd className="min-w-0 break-words font-mono font-medium text-ink">{purchase.price}</dd>
+              <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 border-b border-ink/[0.06] pb-5 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                <dt className="text-xs font-medium text-ink-soft">{t("price")}</dt>
+                <dd className="min-w-0 break-words text-lg font-semibold leading-snug text-ink">{purchase.price}</dd>
               </div>
             ) : null}
-            <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 border-b border-ink/10 py-3">
-              <dt className="text-ink-soft">{t("description")}</dt>
-              <dd className="min-w-0 whitespace-pre-wrap break-words leading-relaxed text-ink">{purchase.description}</dd>
-            </div>
-            <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 py-3">
-              <dt className="text-ink-soft">{t("clearsAfter")}</dt>
-              <dd className="font-mono text-xs text-ink">{formatDate(purchase.expiresAt, language)}</dd>
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+              <dt className="text-xs font-medium text-ink-soft">{t("description")}</dt>
+              <dd className="min-w-0 whitespace-pre-wrap break-words leading-7 text-ink">{purchase.description}</dd>
             </div>
             {productUrl ? (
-              <div className="mt-1 rounded-card bg-ink/[0.04] p-3">
-                <dt className="text-ink-soft">{t("productLink")}</dt>
+              <div className="border-t border-ink/[0.06] pt-5">
+                <dt className="text-xs font-medium text-ink-soft">{t("productLink")}</dt>
                 <dd className="mt-1 select-text break-all font-mono text-xs leading-relaxed text-ink">
                   {productUrl}
                 </dd>
@@ -308,9 +304,12 @@ export function PurchaseDetailPage() {
             <img
               src={purchase.imageDataUrl}
               alt={purchase.name}
-              className="mt-3 max-h-[420px] w-full rounded-card object-cover"
+              className="mt-5 max-h-[420px] w-full rounded-card object-cover"
             />
           ) : null}
+          <p className="mt-5 border-t border-ink/[0.06] pt-3 text-left text-xs text-ink-soft">
+            {t("clearsAfter")} · {formatDate(purchase.expiresAt, language)}
+          </p>
         </section>
 
         <section className="pinned-card">

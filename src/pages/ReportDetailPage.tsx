@@ -182,15 +182,14 @@ export function ReportDetailPage() {
 
         <section className="pinned-card">
           <dl className="flex flex-col text-left text-sm">
-            <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 border-b border-ink/10 pb-3">
-              <dt className="text-ink-soft">{t("comments")}</dt>
-              <dd className="min-w-0 whitespace-pre-wrap break-words leading-relaxed text-ink">{report.comments}</dd>
-            </div>
-            <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-x-4 pt-3">
-              <dt className="text-ink-soft">{t("clearsAfter")}</dt>
-              <dd className="font-mono text-xs text-ink">{formatDate(report.expiresAt, language)}</dd>
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+              <dt className="text-xs font-medium text-ink-soft">{t("comments")}</dt>
+              <dd className="min-w-0 whitespace-pre-wrap break-words leading-7 text-ink">{report.comments}</dd>
             </div>
           </dl>
+          <p className="mt-5 border-t border-ink/[0.06] pt-3 text-left text-xs text-ink-soft">
+            {t("clearsAfter")} · {formatDate(report.expiresAt, language)}
+          </p>
         </section>
 
         {isTarget || report.targetResponse ? (
